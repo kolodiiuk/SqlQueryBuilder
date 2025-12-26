@@ -1,0 +1,51 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqlQueryBuilder.Compiler", "SqlQueryBuilder.Compiler\SqlQueryBuilder.Compiler.csproj", "{CD6A187B-5B8A-4B4F-874B-83D50586D70F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqlQueryBuilder.Api", "SqlQueryBuilder.Api\SqlQueryBuilder.Api.csproj", "{437A8129-5362-4C14-97B6-0B3EBD0AA76B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{7F8BC835-3664-458E-A51E-0B46A34E7369}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqlQueryBuilder.UnitTests", "SqlQueryBuilder.UnitTests\SqlQueryBuilder.UnitTests.csproj", "{A3762E9F-B516-4A27-A341-BFD76698B17C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{2E95407D-ABAF-4607-961D-EC2CDE25267B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqlQueryBuilder.Auth", "SqlQueryBuilder.Auth\SqlQueryBuilder.Auth.csproj", "{7D0977D5-F568-41BE-8892-B75E70390CE9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqlQueryBuilder.QueryExecution", "SqlQueryBuilder.QueryExecution\SqlQueryBuilder.QueryExecution.csproj", "{742B4C73-A761-4AA0-AF9B-C377E5C9E203}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CD6A187B-5B8A-4B4F-874B-83D50586D70F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CD6A187B-5B8A-4B4F-874B-83D50586D70F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CD6A187B-5B8A-4B4F-874B-83D50586D70F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CD6A187B-5B8A-4B4F-874B-83D50586D70F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{437A8129-5362-4C14-97B6-0B3EBD0AA76B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{437A8129-5362-4C14-97B6-0B3EBD0AA76B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{437A8129-5362-4C14-97B6-0B3EBD0AA76B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{437A8129-5362-4C14-97B6-0B3EBD0AA76B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A3762E9F-B516-4A27-A341-BFD76698B17C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A3762E9F-B516-4A27-A341-BFD76698B17C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A3762E9F-B516-4A27-A341-BFD76698B17C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A3762E9F-B516-4A27-A341-BFD76698B17C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7D0977D5-F568-41BE-8892-B75E70390CE9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7D0977D5-F568-41BE-8892-B75E70390CE9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7D0977D5-F568-41BE-8892-B75E70390CE9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7D0977D5-F568-41BE-8892-B75E70390CE9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{742B4C73-A761-4AA0-AF9B-C377E5C9E203}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{742B4C73-A761-4AA0-AF9B-C377E5C9E203}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{742B4C73-A761-4AA0-AF9B-C377E5C9E203}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{742B4C73-A761-4AA0-AF9B-C377E5C9E203}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{437A8129-5362-4C14-97B6-0B3EBD0AA76B} = {7F8BC835-3664-458E-A51E-0B46A34E7369}
+		{CD6A187B-5B8A-4B4F-874B-83D50586D70F} = {7F8BC835-3664-458E-A51E-0B46A34E7369}
+		{A3762E9F-B516-4A27-A341-BFD76698B17C} = {2E95407D-ABAF-4607-961D-EC2CDE25267B}
+		{7D0977D5-F568-41BE-8892-B75E70390CE9} = {7F8BC835-3664-458E-A51E-0B46A34E7369}
+		{742B4C73-A761-4AA0-AF9B-C377E5C9E203} = {7F8BC835-3664-458E-A51E-0B46A34E7369}
+	EndGlobalSection
+EndGlobal
