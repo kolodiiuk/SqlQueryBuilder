@@ -1,0 +1,21 @@
+﻿{
+  "Routes": [
+    {
+      "DownstreamPathTemplate": "/api/auth/register",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5279
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth/register",
+      "UpstreamHttpMethod": [
+        "POST"
+      ]
+    }
+  ],
+  "GlobalConfiguration": {
+    "BaseUrl": "http://localhost:5137"
+  }
+}
