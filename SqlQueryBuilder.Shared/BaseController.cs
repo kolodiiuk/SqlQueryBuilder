@@ -1,8 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace SqlQueryBuilder.Shared;
 
-public abstract class BaseController<TController> where TController : class
+public abstract class BaseController<TController> : ControllerBase where TController : class
 {
     protected BaseController(ILogger<TController> logger)
     {

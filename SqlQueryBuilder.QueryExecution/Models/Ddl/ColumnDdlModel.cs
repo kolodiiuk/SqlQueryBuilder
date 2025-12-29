@@ -1,6 +1,6 @@
-using SqlQueryBuilder.Api.Enums;
+using SqlQueryBuilder.QueryExecution.Enums;
 
-namespace SqlQueryBuilder.Api.Models.Ddl;
+namespace SqlQueryBuilder.QueryExecution.Models.Ddl;
 
 public class ColumnDdlModel
 {

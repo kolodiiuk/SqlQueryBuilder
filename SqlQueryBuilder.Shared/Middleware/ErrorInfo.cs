@@ -1,4 +1,4 @@
-namespace SqlQueryBuilder.Api.Middleware;
+namespace SqlQueryBuilder.Shared.Middleware;
 
 public class ErrorInfo
 {

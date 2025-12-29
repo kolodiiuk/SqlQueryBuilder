@@ -1,6 +1,4 @@
-﻿using SqlQueryBuilder.Shared;
-
-namespace PlugPlay.Domain.Extensions;
+﻿namespace SqlQueryBuilder.Shared.Extensions;
 
 public static class ResultExtensions
 {

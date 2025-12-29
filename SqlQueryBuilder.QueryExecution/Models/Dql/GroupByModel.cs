@@ -1,4 +1,4 @@
-namespace SqlQueryBuilder.Api.Models.Dql;
+namespace SqlQueryBuilder.QueryExecution.Models.Dql;
 
 public class GroupByModel
 {

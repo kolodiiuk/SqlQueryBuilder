@@ -18,6 +18,31 @@ builder.Services.AddSwaggerGen(c =>
         Title = "SqlQueryBuilder API Gateway",
         Version = "v1"
     });
+
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        In = ParameterLocation.Header,
+        Description = "Enter token",
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] { }
+        }
+    });
 });
 
 builder.Services.AddCors(options =>
@@ -38,13 +63,22 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(c =>
+    app.UseSwaggerUI(options =>
     {
-        c.SwaggerEndpoint("http://localhost:5279/swagger/v1/swagger.json", "Auth");
-        c.RoutePrefix = "swagger";
+        options.SwaggerEndpoint(
+            "/swagger/v1/swagger.json",
+            "SqlQueryBuilder API v1");
+    });
+
+    app.MapScalarApiReference(options =>
+    {
+        options
+            .WithTitle("SqlQueryBuilder API")
+            .WithOpenApiRoutePattern("/swagger/v1/swagger.json");
     });
 }
 
 app.UseCors("AllowAllOrigins");
 await app.UseOcelot();
+
 app.Run();

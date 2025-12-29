@@ -1,4 +1,4 @@
-namespace SqlQueryBuilder.Api.Enums;
+namespace SqlQueryBuilder.QueryExecution.Enums;
 
 public enum JoinOp
 {

@@ -1,7 +1,6 @@
-using SqlQueryBuilder.Api.Models;
-using SqlQueryBuilder.Api.Models.Ddl;
+using SqlQueryBuilder.QueryExecution.Models.Ddl;
 
-namespace SqlQueryBuilder.Api.Requests;
+namespace SqlQueryBuilder.QueryExecution.Requests;
 
 public class CreateTableRequest
 {

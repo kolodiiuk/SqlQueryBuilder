@@ -1,6 +1,6 @@
-using SqlQueryBuilder.Api.Enums;
+using SqlQueryBuilder.QueryExecution.Enums;
 
-namespace SqlQueryBuilder.Api.Models.Dql;
+namespace SqlQueryBuilder.QueryExecution.Models.Dql;
 
 public class OrderByModel
 {

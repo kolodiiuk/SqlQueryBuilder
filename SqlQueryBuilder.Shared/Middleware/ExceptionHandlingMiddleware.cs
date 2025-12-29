@@ -1,6 +1,8 @@
 using System.Net;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
-namespace SqlQueryBuilder.Api.Middleware;
+namespace SqlQueryBuilder.Shared.Middleware;
 
 public class ExceptionHandlerMiddleware
 {

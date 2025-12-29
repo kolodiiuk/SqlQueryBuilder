@@ -1,7 +1,6 @@
-using SqlQueryBuilder.Api.Models;
-using SqlQueryBuilder.Api.Models.Dql;
+using SqlQueryBuilder.QueryExecution.Models.Dql;
 
-namespace SqlQueryBuilder.Api.Requests;
+namespace SqlQueryBuilder.QueryExecution.Requests;
 
 public class QueryRequest
 {
