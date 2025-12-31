@@ -1,4 +1,4 @@
-namespace SqlQueryBuilder.UnitTests;
+namespace SQB.Compiler.UnitTests;
 
 public class UnitTest1
 {
