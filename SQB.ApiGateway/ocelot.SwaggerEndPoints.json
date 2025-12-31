@@ -1,0 +1,14 @@
+{
+  "SwaggerEndPoints": [
+    {
+      "Key": "auth",
+      "Config": [
+        {
+          "Name": "SQB Auth Service",
+          "Version": "v1",
+          "Url": "http://localhost:5279/swagger/v1/swagger.json"
+        }
+      ]
+    }
+  ]
+}
