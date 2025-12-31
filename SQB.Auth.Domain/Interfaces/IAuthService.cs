@@ -1,7 +1,8 @@
-﻿using SQB.Auth.Domain.Models;
+﻿using SQB.Auth.Domain.Entities;
+using SQB.Auth.Domain.Models;
 using SQB.Shared;
 
-namespace SQB.Auth.Application.Services;
+namespace SQB.Auth.Domain.Interfaces;
 
 public interface IAuthService
 {
@@ -15,5 +16,5 @@ public interface IAuthService
 
     Task<Result> LogoutAsync(string token);
 
-    Task<Result<User>> GetUserAsync(int userId);
+    Task<Result<UserInfo>> GetUserAsync(int userId);
 }

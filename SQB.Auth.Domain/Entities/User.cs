@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Identity;
-using SQB.Auth.Enums;
-using SQB.Auth.Models;
+using SQB.Auth.Domain.Enums;
 
-namespace SQB.Auth.Domain.Models;
+namespace SQB.Auth.Domain.Entities;
 
 public class User : IdentityUser<int>
 {

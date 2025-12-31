@@ -1,10 +1,9 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
+using SQB.Auth.Domain.Entities;
 using SQB.Auth.Domain.Interfaces;
 using SQB.Auth.Domain.Models;
-using SQB.Auth.Infrastructure;
-using SQB.Auth.Models;
 using SQB.Shared;
 
 namespace SQB.Auth.Application.Services;
@@ -183,7 +182,7 @@ public class AuthService : IAuthService
         return Result.Success();
     }
 
-    public async Task<Result<User>> GetUserAsync(int userId)
+    public async Task<Result<UserInfo>> GetUserAsync(int userId)
     {
         // var user = await _context.Users
         //     .Where(u => u.Id == userId)
@@ -191,7 +190,7 @@ public class AuthService : IAuthService
         var userRes = await _authRepository.GetUserById(userId);
         if (userRes.Failure || userRes.Value == null)
         {
-            return Result.Fail<User>("User is not found");
+            return Result.Fail<UserInfo>("User is not found");
         }
 
         return Result.Success(userRes.Value);

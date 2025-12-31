@@ -4,7 +4,8 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
-using SQB.Auth.Domain.Models;
+using SQB.Auth.Domain.Entities;
+using SQB.Auth.Domain.Interfaces;
 
 namespace SQB.Auth.Application.Services;
 

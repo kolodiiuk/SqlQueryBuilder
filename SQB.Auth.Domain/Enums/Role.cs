@@ -1,4 +1,4 @@
-namespace SQB.Auth.Enums;
+namespace SQB.Auth.Domain.Enums;
 
 public enum Role
 {

@@ -1,6 +1,4 @@
-using SQB.Auth.Domain.Models;
-
-namespace SQB.Auth.Models;
+namespace SQB.Auth.Domain.Entities;
 
 public class UserRefreshToken
 {

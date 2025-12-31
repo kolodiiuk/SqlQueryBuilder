@@ -1,7 +1,7 @@
 using System.Security.Claims;
-using SQB.Auth.Domain.Models;
+using SQB.Auth.Domain.Entities;
 
-namespace SQB.Auth.Application.Services;
+namespace SQB.Auth.Domain.Interfaces;
 
 public interface IJwtService
 {

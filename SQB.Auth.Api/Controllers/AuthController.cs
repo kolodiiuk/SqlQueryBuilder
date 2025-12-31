@@ -2,9 +2,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SQB.Auth.Application.Services;
+using SQB.Auth.Domain.Entities;
+using SQB.Auth.Domain.Enums;
+using SQB.Auth.Domain.Interfaces;
 using SQB.Auth.Domain.Models;
 using SQB.Auth.Dtos;
-using SQB.Auth.Enums;
 using SQB.Auth.Logging;
 using SQB.Shared;
 using SQB.Shared.Extensions;
@@ -237,17 +239,12 @@ public class AuthController : BaseController<AuthController>
                 return Unauthorized();
             }
 
-            var userDto = new UserDto
-            {
-                Id = result.Value.Id,
-                Email = result.Value.Email,
-            };
-
-            return Ok(userDto);
+            return Ok(result.Value);
         }
 
         Log(LogLevel.Warning, AuthControllerEventIds.TokenVerificationParseFailed,
             "Token verification failed: could not parse user ID");
+
         return Unauthorized();
     }
 

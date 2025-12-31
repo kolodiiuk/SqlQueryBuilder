@@ -1,12 +1,12 @@
+using SQB.Auth.Domain.Entities;
 using SQB.Auth.Domain.Models;
-using SQB.Auth.Models;
 using SQB.Shared;
 
 namespace SQB.Auth.Domain.Interfaces;
 
 public interface IAuthRepository
 {
-    Task<Result<User>> GetUserById(int userId);
+    Task<Result<UserInfo>> GetUserById(int userId);
 
     Task<Result> RevokeRefreshTokenAsync(UserRefreshToken rt);
 

@@ -1,5 +1,5 @@
+using SQB.Auth.Domain.Entities;
 using SQB.Auth.Domain.Models;
-using SQB.Auth.Models;
 
 namespace SQB.Auth.Dtos;
 
