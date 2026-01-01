@@ -16,7 +16,7 @@ public class AuthRepository : IAuthRepository
         _connString = connString;
     }
 
-    public async Task<Result<UserInfo>> GetUserById(int userId)
+    public async Task<Result<UserInfo>> GetUserById(Guid userId)
     {
         var sql = """
                   select id, email 
