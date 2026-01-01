@@ -14,6 +14,81 @@
         "POST"
       ],
       "SwaggerKey": "auth"
+    },
+    {
+      "DownstreamPathTemplate": "/api/auth/login",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5279
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth/login",
+      "UpstreamHttpMethod": [
+        "POST"
+      ],
+      "SwaggerKey": "auth"
+    },
+    {
+      "DownstreamPathTemplate": "/api/auth/refresh",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5279
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth/refresh",
+      "UpstreamHttpMethod": [
+        "POST"
+      ],
+      "SwaggerKey": "auth"
+    },
+    {
+      "DownstreamPathTemplate": "/api/auth/logout",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5279
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth/logout",
+      "UpstreamHttpMethod": [
+        "POST"
+      ],
+      "SwaggerKey": "auth"
+    },
+    {
+      "DownstreamPathTemplate": "/api/auth/verify",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5279
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth/verify",
+      "UpstreamHttpMethod": [
+        "POST"
+      ],
+      "SwaggerKey": "auth"
+    },
+    {
+      "DownstreamPathTemplate": "/api/auth/create-admin",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5279
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth/create-admin",
+      "UpstreamHttpMethod": [
+        "POST"
+      ],
+      "SwaggerKey": "auth"
     }
   ],
   "GlobalConfiguration": {

@@ -2,6 +2,7 @@ using Scalar.AspNetCore;
 using Serilog;
 using Serilog.Events;
 using SQB.Auth.Application.Extensions;
+using SQB.Auth.Infrastructure.Extensions;
 
 var config = new ConfigurationBuilder()
     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
@@ -27,6 +28,7 @@ Log.Logger = new LoggerConfiguration()
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.RegisterServices();
+builder.Services.RegisterRepositories();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
