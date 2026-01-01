@@ -6,7 +6,7 @@ namespace SQB.Auth.Domain.Interfaces;
 
 public interface IAuthRepository
 {
-    Task<Result<UserInfo>> GetUserById(int userId);
+    Task<Result<UserInfo>> GetUserById(Guid userId);
 
     Task<Result> RevokeRefreshTokenAsync(UserRefreshToken rt);
 

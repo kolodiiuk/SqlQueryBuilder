@@ -1,7 +1,8 @@
 namespace SQB.Auth.Domain.Enums;
 
+[Flags]
 public enum Role
 {
-    User = 0,
-    Admin = 1,
+    User = 1,
+    Admin = 1 << 1,
 }

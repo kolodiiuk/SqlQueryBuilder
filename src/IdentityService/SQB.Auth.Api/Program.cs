@@ -2,6 +2,8 @@ using Scalar.AspNetCore;
 using Serilog;
 using Serilog.Events;
 using SQB.Auth.Application.Extensions;
+using SQB.Auth.Domain.Models;
+using SQB.Auth.Infrastructure;
 using SQB.Auth.Infrastructure.Extensions;
 
 var config = new ConfigurationBuilder()
@@ -26,9 +28,14 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
-
+var configuration = builder.Configuration;
 builder.Services.RegisterServices();
 builder.Services.RegisterRepositories();
+builder.Services.Configure<IdentityStoreOptions>(options =>
+{
+    options.ConnectionString = configuration.GetConnectionString("Identity");
+});
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
