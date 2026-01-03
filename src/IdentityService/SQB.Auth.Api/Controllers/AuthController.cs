@@ -1,17 +1,13 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SQB.Auth.Application.Services;
 using SQB.Auth.Domain.Entities;
 using SQB.Auth.Domain.Enums;
 using SQB.Auth.Domain.Interfaces;
-using SQB.Auth.Domain.Models;
 using SQB.Auth.Dtos;
 using SQB.Auth.Logging;
 using SQB.Shared;
 using SQB.Shared.Extensions;
-using LoginRequest = Microsoft.AspNetCore.Identity.Data.LoginRequest;
-using RegisterRequest = Microsoft.AspNetCore.Identity.Data.RegisterRequest;
 
 namespace SQB.Auth.Controllers;
 
@@ -33,10 +29,10 @@ public class AuthController : BaseController<AuthController>
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [HttpPost("register")]
-    [EndpointSummary("Registers a new SpotRent user account.")]
+    [EndpointSummary("Registers a new user account.")]
     [EndpointDescription(
-        "Validates the incoming registration payload and creates an admin user with the provided credentials.")]
-    public async Task<IActionResult> Register(RegisterRequest registerRequest)
+        "Validates the incoming registration payload and creates a user with the provided credentials.")]
+    public async Task<IActionResult> Register(RegisterRequest registerRequest, CancellationToken ct)
     {
         Log(LogLevel.Information, AuthControllerEventIds.RegisterAttempt,
             "Registration attempt for email: {Email}", registerRequest?.Email);
@@ -45,14 +41,16 @@ public class AuthController : BaseController<AuthController>
         {
             Log(LogLevel.Warning, AuthControllerEventIds.RegisterInvalidNull,
                 "Invalid register data: request is null");
-            return BadRequest(new ProblemDetails() { Title = "Invalid register data" });
+            
+            return StatusCode(StatusCodes.Status400BadRequest, new ProblemDetails() { Title = "Invalid register data" });
         }
 
         if (!ModelState.IsValid)
         {
             Log(LogLevel.Warning, AuthControllerEventIds.RegisterModelInvalid,
                 "Invalid register data: model state invalid for email: {Email}", registerRequest.Email);
-            return BadRequest(ModelState);
+            
+            return StatusCode(StatusCodes.Status400BadRequest, ModelState);
         }
 
         var user = new User
@@ -62,7 +60,7 @@ public class AuthController : BaseController<AuthController>
             Role = Role.User,
         };
 
-        var result = await _authService.RegisterAsync(user, registerRequest.Password);
+        var result = await _authService.RegisterAsync(user, registerRequest.Password, ct);
         result.OnFailure(() =>
                 Log(LogLevel.Error, AuthControllerEventIds.RegisterFailed,
                     "Registration failed for email: {Email}. Error: {Error}",
@@ -82,8 +80,8 @@ public class AuthController : BaseController<AuthController>
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [HttpPost("login")]
     [EndpointSummary("Authenticates a user with email and password.")]
-    [EndpointDescription("Validates user credentials and returns access plus refresh tokens for the account.")]
-    public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request)
+    [EndpointDescription("Validates user credentials and returns access plus tokens.")]
+    public async Task<ActionResult<LoginResponse>> Login(LoginRequest request, CancellationToken ct)
     {
         Log(LogLevel.Information, AuthControllerEventIds.LoginAttempt,
             "Login attempt for email: {Email}", request?.Email);
@@ -92,20 +90,21 @@ public class AuthController : BaseController<AuthController>
         {
             Log(LogLevel.Warning, AuthControllerEventIds.LoginInvalidNull,
                 "Invalid login data: request is null");
-            return BadRequest(new ProblemDetails() { Title = $"Invalid user data" });
+            
+            return StatusCode(StatusCodes.Status400BadRequest, new ProblemDetails() { Title = $"Invalid user data" });
         }
 
-        var validationResult = await _authService.ValidateUserCredentials(request.Email, request.Password);
+        var validationResult = await _authService.ValidateUserCredentials(request.Email, request.Password, ct);
         validationResult.OnFailure(() =>
             Log(LogLevel.Warning, AuthControllerEventIds.LoginFailed,
                 "Login failed for email: {Email}. Error: {Error}", request.Email,
                 validationResult.Error));
         if (validationResult.Failure)
         {
-            return Unauthorized(new { Message = validationResult.Error });
+            return StatusCode(StatusCodes.Status401Unauthorized, new { Message = validationResult.Error });
         }
 
-        var tokens = await _authService.GenerateTokens(validationResult.Value);
+        var tokens = await _authService.GenerateTokens(validationResult.Value, ct);
         var tokenExpiration = DateTime.UtcNow.AddMinutes(
             Convert.ToDouble(_configuration["Jwt:TokenExpirationMinutes"]));
         var response = new LoginResponse
@@ -120,10 +119,11 @@ public class AuthController : BaseController<AuthController>
             }
         };
 
+        
         Log(LogLevel.Information, AuthControllerEventIds.LoginSuccess,
             "Successfully logged in user: {Email}", request.Email);
 
-        return Ok(response);
+        return StatusCode(StatusCodes.Status200OK, response);
     }
 
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -133,23 +133,24 @@ public class AuthController : BaseController<AuthController>
     [EndpointSummary("Refreshes an access token using a refresh token.")]
     [EndpointDescription(
         "Validates the supplied refresh token, regenerates JWT credentials, and returns updated token metadata.")]
-    public async Task<ActionResult<LoginResponse>> Refresh([FromBody] RefreshTokenRequest request)
+    public async Task<ActionResult<LoginResponse>> Refresh(RefreshTokenRequest request, CancellationToken ct)
     {
         Log(LogLevel.Information, AuthControllerEventIds.TokenRefreshAttempt, "Token refresh attempt");
 
         if (string.IsNullOrEmpty(request.RefreshToken))
         {
             Log(LogLevel.Warning, AuthControllerEventIds.TokenRefreshEmpty, "Refresh token is empty");
-            return BadRequest(new { message = "Refresh token is required" });
+            
+            return StatusCode(StatusCodes.Status400BadRequest, new { message = "Refresh token is required" });
         }
 
-        var result = await _authService.RefreshTokenAsync(request.RefreshToken);
+        var result = await _authService.RefreshTokenAsync(request.RefreshToken, ct);
         result.OnFailure(() =>
             Log(LogLevel.Warning, AuthControllerEventIds.TokenRefreshFailed,
                 "Token refresh failed: {Error}", result.Error));
         if (result.Failure)
         {
-            return Unauthorized(new { message = result.Error });
+            return StatusCode(StatusCodes.Status401Unauthorized, new { message = result.Error });
         }
 
         LoginResponse response = new LoginResponse
@@ -168,7 +169,7 @@ public class AuthController : BaseController<AuthController>
         Log(LogLevel.Information, AuthControllerEventIds.TokenRefreshedSuccess,
             "Successfully refreshed token for user ID: {UserId}", result.Value.Id);
 
-        return Ok(response);
+        return StatusCode(StatusCodes.Status200OK, response);
     }
 
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -176,7 +177,7 @@ public class AuthController : BaseController<AuthController>
     [HttpPost("logout")]
     [EndpointSummary("Logs out a user by revoking the refresh token.")]
     [EndpointDescription("Ensures a refresh token is provided and invalidates it to end the user session.")]
-    public async Task<IActionResult> Logout([FromBody] LogoutDto request)
+    public async Task<IActionResult> Logout(LogoutDto request, CancellationToken ct)
     {
         Log(LogLevel.Information, AuthControllerEventIds.LogoutAttempt, "Logout attempt");
 
@@ -184,10 +185,11 @@ public class AuthController : BaseController<AuthController>
         {
             Log(LogLevel.Warning, AuthControllerEventIds.LogoutEmptyToken,
                 "Logout failed: refresh token is empty");
-            return BadRequest(new { message = "Refresh token is required" });
+            
+            return StatusCode(StatusCodes.Status400BadRequest, new { message = "Refresh token is required" });
         }
 
-        var result = await _authService.LogoutAsync(request.RefreshToken);
+        var result = await _authService.LogoutAsync(request.RefreshToken, ct);
         result.OnFailure(() =>
                 Log(LogLevel.Warning, AuthControllerEventIds.LogoutFailed, "Logout failed: {Error}",
                     result.Error))
@@ -195,10 +197,10 @@ public class AuthController : BaseController<AuthController>
                 Log(LogLevel.Information, AuthControllerEventIds.LogoutSuccess, "Successfully logged out user"));
         if (result.Failure)
         {
-            return BadRequest(new { message = result.Error });
+            return StatusCode(StatusCodes.Status400BadRequest, new { message = result.Error });
         }
 
-        return Ok(new { message = "Logged out successfully" });
+        return StatusCode(StatusCodes.Status200OK, new { message = "Logged out successfully" });
     }
 
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -209,7 +211,7 @@ public class AuthController : BaseController<AuthController>
     [EndpointSummary("Verifies the caller's JWT and returns profile data.")]
     [EndpointDescription(
         "Reads the user identifier from claims, loads the user entity, and confirms the token is still valid.")]
-    public async Task<ActionResult<UserDto>> VerifyToken()
+    public async Task<ActionResult<UserDto>> VerifyToken(CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         Log(LogLevel.Information, AuthControllerEventIds.TokenVerificationAttempt,
@@ -219,36 +221,32 @@ public class AuthController : BaseController<AuthController>
         {
             Log(LogLevel.Warning, AuthControllerEventIds.TokenVerificationNoUserId,
                 "Token verification failed: user ID not found in claims");
-            return Unauthorized();
+
+            return StatusCode(StatusCodes.Status401Unauthorized);
         }
 
-        var isParsed = int.TryParse(userId, out var id);
+        var isParsed = Guid.TryParse(userId, out var guid);
         if (isParsed)
         {
-            var result = await _authService.GetUserAsync(id);
+            var result = await _authService.GetUserAsync(guid, ct);
             result.OnFailure(() =>
-            {
                 Log(LogLevel.Warning, AuthControllerEventIds.TokenVerificationFailed,
-                    "Token verification failed for user ID: {UserId}. Error: {Error}", id, result.Error);
-            });
+                    "Token verification failed for user ID: {UserId}. Error: {Error}", guid, result.Error));
             result.OnSuccess(() =>
-            {
                 Log(LogLevel.Information, AuthControllerEventIds.TokenVerifiedSuccess,
-                    "Successfully verified token for user ID: {UserId}", id);
-            });
-
+                    "Successfully verified token for user ID: {UserId}", guid));
             if (result.Failure)
             {
-                return Unauthorized();
+                return StatusCode(StatusCodes.Status401Unauthorized);
             }
 
-            return Ok(result.Value);
+            return StatusCode(StatusCodes.Status200OK, result.Value);
         }
 
         Log(LogLevel.Warning, AuthControllerEventIds.TokenVerificationParseFailed,
             "Token verification failed: could not parse user ID");
 
-        return Unauthorized();
+        return StatusCode(StatusCodes.Status401Unauthorized);
     }
 
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -258,7 +256,7 @@ public class AuthController : BaseController<AuthController>
     [Authorize(Roles = "Admin")]
     [EndpointSummary("Creates a new administrator account.")]
     [EndpointDescription("Accepts registration data from an admin user.")]
-    public async Task<IActionResult> CreateAdminAsync(RegisterRequest registerRequest)
+    public async Task<IActionResult> CreateAdminAsync(RegisterRequest registerRequest, CancellationToken ct)
     {
         Log(LogLevel.Information, AuthControllerEventIds.CreateAdminAttempt,
             "Admin creation attempt for email: {Email}", registerRequest?.Email);
@@ -267,7 +265,8 @@ public class AuthController : BaseController<AuthController>
         {
             Log(LogLevel.Warning, AuthControllerEventIds.CreateAdminInvalidNull,
                 "Invalid admin creation data: request is null");
-            return BadRequest(new ProblemDetails() { Title = "Invalid register data" });
+            
+            return StatusCode(StatusCodes.Status400BadRequest, new ProblemDetails() { Title = "Invalid register data" });
         }
 
         var user = new User
@@ -277,7 +276,7 @@ public class AuthController : BaseController<AuthController>
             Role = Role.Admin,
         };
 
-        var result = await _authService.RegisterAsync(user, registerRequest.Password);
+        var result = await _authService.RegisterAsync(user, registerRequest.Password, ct);
         result.OnFailure(() =>
                 Log(LogLevel.Error, AuthControllerEventIds.CreateAdminFailed,
                     "Admin creation failed for email: {Email}. Error: {Error}",
@@ -287,9 +286,9 @@ public class AuthController : BaseController<AuthController>
                     "Successfully created admin with email: {Email}", registerRequest.Email));
         if (result.Failure)
         {
-            return StatusCode(500, result.Error);
+            return StatusCode(StatusCodes.Status500InternalServerError, result.Error);
         }
 
-        return Ok();
+        return StatusCode(StatusCodes.Status200OK);
     }
 }
