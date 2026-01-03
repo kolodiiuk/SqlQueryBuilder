@@ -33,7 +33,7 @@ public class AuthService : IAuthService
         _configuration = configuration;
     }
 
-    public async Task<Result> RegisterAsync(User user, string password)
+    public async Task<Result> RegisterAsync(User user, string password, CancellationToken ct)
     {
         user.UserName = user.Email;
 
@@ -63,7 +63,7 @@ public class AuthService : IAuthService
         }
     }
 
-    public async Task<Result<User>> ValidateUserCredentials(string email, string password)
+    public async Task<Result<User>> ValidateUserCredentials(string email, string password, CancellationToken ct)
     {
         // var user = await _context.Users
         //     .FirstOrDefaultAsync(u => u.Email == email);
@@ -74,7 +74,7 @@ public class AuthService : IAuthService
         }
 
         var user = userRes.Value;
-        if (user == null || !(await VerifyPasswordAsync(user, password)))
+        if (user == null || !(await VerifyPasswordAsync(user, password, ct)))
         {
             return Result.Fail<User>("Invalid email or password");
         }
@@ -82,7 +82,7 @@ public class AuthService : IAuthService
         return Result.Success(user);
     }
 
-    public async Task<(string token, string refreshToken)> GenerateTokens(User user)
+    public async Task<(string token, string refreshToken)> GenerateTokens(User user, CancellationToken ct)
     {
         var token = _jwtService.GenerateToken(user);
         var refreshToken = _jwtService.GenerateRefreshToken();
@@ -108,7 +108,7 @@ public class AuthService : IAuthService
         return new ValueTuple<string, string>(token, refreshToken);
     }
 
-    public async Task<Result<RefreshTokenResponse>> RefreshTokenAsync(string token)
+    public async Task<Result<RefreshTokenResponse>> RefreshTokenAsync(string token, CancellationToken ct)
     {
         // var storedRefreshToken = await _context.UserRefreshTokens
         //     .Include(rt => rt.User)
@@ -157,7 +157,7 @@ public class AuthService : IAuthService
         });
     }
 
-    public async Task<Result> LogoutAsync(string token)
+    public async Task<Result> LogoutAsync(string token, CancellationToken ct)
     {
         // var refreshToken = await _context.UserRefreshTokens
         //     .FirstOrDefaultAsync(rt => rt.Token == token);
@@ -182,7 +182,7 @@ public class AuthService : IAuthService
         return Result.Success();
     }
 
-    public async Task<Result<UserInfo>> GetUserAsync(int userId)
+    public async Task<Result<UserInfo>> GetUserAsync(Guid userId, CancellationToken ct)
     {
         // var user = await _context.Users
         //     .Where(u => u.Id == userId)
@@ -196,7 +196,7 @@ public class AuthService : IAuthService
         return Result.Success(userRes.Value);
     }
 
-    private async Task<bool> VerifyPasswordAsync(User user, string password)
+    private async Task<bool> VerifyPasswordAsync(User user, string password, CancellationToken ct)
         => await _userManager.CheckPasswordAsync(user, password);
 
     private string GetIpAddress()
