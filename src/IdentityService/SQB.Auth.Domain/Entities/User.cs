@@ -1,11 +1,10 @@
 using Microsoft.AspNetCore.Identity;
-using SQB.Auth.Domain.Enums;
 
 namespace SQB.Auth.Domain.Entities;
 
 public class User : IdentityUser<Guid>
 {
-    public Role Role { get; set; } = Role.User;
+    public Role Role { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
