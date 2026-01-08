@@ -17,4 +17,6 @@ public interface IAuthService
     Task<Result> LogoutAsync(string token, CancellationToken ct);
 
     Task<Result<UserInfo>> GetUserAsync(Guid userId, CancellationToken ct);
+
+    Task<Result> RegisterAdminAsync(User user, string registerRequestPassword, CancellationToken ct);
 }
