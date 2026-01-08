@@ -136,23 +136,35 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
     public async Task<User> FindByIdAsync(string userId, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        const string sql = """
-                           select 
-                               id,
-                               user_name,
-                               email,
-                               role,
-                               password_hash,
-                               created_at,
-                               updated_at
-                           from 
-                               users 
-                           where 
-                               id = @id
+        const string getUserSql = """
+                                  select
+                                        id,
+                                        user_name,
+                                        email,
+                                        password_hash,
+                                        created_at,
+                                        updated_at
+                                   from 
+                                        users 
+                                   where 
+                                        id = @id
                            """;
+        const string getUserRoleSql = """
+                                      select
+                                            r.id,
+                                            r.name
+                                      from
+                                            roles r
+                                      inner join user_roles ur on r.id = user_roles.user_id
+                                      where
+                                            ur.user_id = @user_id;
+                                      """;
+
         await using var conn = Open();
         cancellationToken.ThrowIfCancellationRequested();
-        var user = await conn.QuerySingleOrDefaultAsync<User>(sql, new { id = userId });
+        var user = await conn.QuerySingleOrDefaultAsync<User>(getUserSql, new { id = userId });
+        var role = await conn.QuerySingleOrDefaultAsync<Role>(getUserRoleSql, new { user_id = userId });
+        user.Role = role;
 
         return user;
     }
@@ -160,22 +172,35 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
     public async Task<User> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        const string sql = """
-                           select
-                               id,
-                               username,
-                               normalized_username,
-                               email,
-                               password_hash
-                           from 
-                               users
-                           where 
-                               normalized_username = @normalizedUserName
-                           """;
+        const string getUserSql = """
+                                  select
+                                        id,
+                                        username,
+                                        normalized_username,
+                                        email,
+                                        password_hash
+                                   from 
+                                        users
+                                   where 
+                                        normalized_username = @normalizedUserName
+                                  """;
+        const string getUserRoleSql = """
+                                      select
+                                            r.id,
+                                            r.name
+                                      from
+                                            roles r
+                                      inner join user_roles ur on r.id = user_roles.user_id
+                                      where
+                                            ur.user_id = @user_id;
+                                      """;
+
         await using var conn = Open();
         cancellationToken.ThrowIfCancellationRequested();
         var user = await conn.QuerySingleOrDefaultAsync<User>(
-            sql, new { normalizedUserName = normalizedUserName });
+            getUserSql, new { normalizedUserName = normalizedUserName });
+        var role = await conn.QuerySingleOrDefaultAsync<Role>(getUserRoleSql, new { user_id = user.Id });
+        user.Role = role;
 
         return user;
     }
@@ -248,7 +273,14 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
     {
         cancellationToken.ThrowIfCancellationRequested();
         const string sql = """
-                           
+                           select
+                                 r.id,
+                                 r.name,
+                           from
+                                 roles r 
+                           inner join user_roles ur on r.id = ur.user_id
+                           where
+                                 ur.user_id = @user_id
                            """;
         await using var conn = Open();
         cancellationToken.ThrowIfCancellationRequested();
@@ -259,7 +291,14 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
     {
         cancellationToken.ThrowIfCancellationRequested();
         const string sql = """
-
+                           select 
+                                 u.id,
+                           from 
+                                 users u
+                           inner join user_roles ur on ur.user_id = u.id
+                           inner join roles r on r.id = ur.role_id
+                           where 
+                                 u.id = @user_id and r.name = @role_name
                            """;
         await using var conn = Open();
         cancellationToken.ThrowIfCancellationRequested();
@@ -270,7 +309,15 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
     {
         cancellationToken.ThrowIfCancellationRequested();
         const string sql = """
-
+                           select
+                                 u.id,
+                                 u.user_name,
+                                 u.email,
+                                 u.password_hash
+                           from user u
+                           inner join user_roles ur on u.id = ur.user_id
+                           inner join roles r on ur.role_id = r.id
+                           where r.name = @role_name
                            """;
         await using var conn = Open();
         cancellationToken.ThrowIfCancellationRequested();
