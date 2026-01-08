@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SQB.Auth.Domain.Entities;
-using SQB.Auth.Domain.Enums;
 using SQB.Auth.Domain.Interfaces;
 using SQB.Auth.Dtos;
 using SQB.Auth.Logging;
@@ -57,7 +56,6 @@ public class AuthController : BaseController<AuthController>
         {
             Email = registerRequest.Email,
             NormalizedEmail = registerRequest.Email.ToUpper(),
-            Role = Role.User,
         };
 
         var result = await _authService.RegisterAsync(user, registerRequest.Password, ct);
@@ -273,10 +271,9 @@ public class AuthController : BaseController<AuthController>
         {
             Email = registerRequest.Email,
             NormalizedEmail = registerRequest.Email.ToUpper(),
-            Role = Role.Admin,
         };
 
-        var result = await _authService.RegisterAsync(user, registerRequest.Password, ct);
+        var result = await _authService.RegisterAdminAsync(user, registerRequest.Password, ct);
         result.OnFailure(() =>
                 Log(LogLevel.Error, AuthControllerEventIds.CreateAdminFailed,
                     "Admin creation failed for email: {Email}. Error: {Error}",

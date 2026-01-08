@@ -33,7 +33,7 @@ public class AuthService : IAuthService
         _configuration = configuration;
     }
 
-    public async Task<Result> RegisterAsync(User user, string password, CancellationToken ct)
+    public async Task<Result> RegisterAsync(User user, string password,  CancellationToken ct)
     {
         user.UserName = user.Email;
 
@@ -46,7 +46,37 @@ public class AuthService : IAuthService
                     result.Errors.Select(e => e.Description))}");
             }
 
-            var roleResult = await _userManager.AddToRoleAsync(user, user.Role.ToString());
+            var roleResult = await _userManager.AddToRoleAsync(user, "User");
+            if (!roleResult.Succeeded)
+            {
+                return Result.Fail(
+                    $"Failed to assign role: {string.Join(", ",
+                        roleResult.Errors.Select(e => e.Description))}");
+            }
+
+            return Result.Success();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    public async Task<Result> RegisterAdminAsync(User user, string password,  CancellationToken ct)
+    {
+        user.UserName = user.Email;
+
+        try
+        {
+            var result = await _userManager.CreateAsync(user, password);
+            if (!result.Succeeded)
+            {
+                return Result.Fail($"Failed to create a user: {string.Join(", ",
+                    result.Errors.Select(e => e.Description))}");
+            }
+
+            var roleResult = await _userManager.AddToRoleAsync(user, "Admin");
             if (!roleResult.Succeeded)
             {
                 return Result.Fail(
