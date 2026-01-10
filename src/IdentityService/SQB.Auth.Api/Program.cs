@@ -29,6 +29,7 @@ Log.Logger = new LoggerConfiguration()
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
+Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 builder.Services.RegisterServices();
 builder.Services.RegisterRepositories();
 builder.Services.Configure<IdentityStoreOptions>(options =>
