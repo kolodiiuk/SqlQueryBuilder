@@ -20,111 +20,51 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
     {
     }
 
-    public async Task<string> GetUserIdAsync(User user, CancellationToken cancellationToken)
+    public Task<string> GetUserIdAsync(User user, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        const string sql = """
-                           select 
-                                 id
-                           from
-                                 users
-                           where
-                                 id = @user_id
-                           """;
-        await using var conn = Open();
-        cancellationToken.ThrowIfCancellationRequested();
-        var userId = await conn.QuerySingleOrDefaultAsync<string>(sql, new { user_id = user.Id });
+        ArgumentNullException.ThrowIfNull(user);
 
-        return userId;
+        return Task.FromResult(user.Id.ToString());
     }
 
-    public async Task<string> GetUserNameAsync(User user, CancellationToken cancellationToken)
+    public Task<string> GetUserNameAsync(User user, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        const string sql = """
-                           select 
-                                  user_name
-                           from
-                                  users
-                           where
-                                  id = @user_id
-                           """;
-        await using var conn = Open();
-        cancellationToken.ThrowIfCancellationRequested();
-        var userId = await conn.QuerySingleOrDefaultAsync<string>(sql, new { user_id = user.Id });
+        ArgumentNullException.ThrowIfNull(user);
 
-        return userId;
+        return Task.FromResult(user.UserName);
     }
 
-    public async Task SetUserNameAsync(User user, string userName, CancellationToken cancellationToken)
+
+    public Task SetUserNameAsync(User user, string userName, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        const string sql = """
-                           update
-                                  users
-                           set
-                                  user_name = @user_name,
-                                  concurrency_stamp = @concurrency_stamp
-                           where
-                                  id = @user_id
-                                  and concurrency_stamp = @concurrency_stamp
-                           """;
-        var newConcurrencyStamp = Guid.NewGuid().ToString();
-        await using var conn = Open();
-        cancellationToken.ThrowIfCancellationRequested();
-        await conn.ExecuteAsync(sql,
-            new
-            {
-                user_name = userName,
-                user_id = user.Id,
-                concurrency_stamp = user.ConcurrencyStamp,
-                new_concurrency_stamp = newConcurrencyStamp
-            });
-        //todo: error handling for concurrency
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(userName);
+
+        user.UserName = userName;
+
+        return Task.CompletedTask;
     }
 
-    public async Task<string> GetNormalizedUserNameAsync(User user, CancellationToken cancellationToken)
+    public Task<string> GetNormalizedUserNameAsync(User user, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        const string sql = """
-                           select 
-                                 normalized_user_name
-                           from
-                                 users
-                           where
-                                 id = @user_id
-                           """;
-        await using var conn = Open();
-        cancellationToken.ThrowIfCancellationRequested();
-        var normalizedUserName = await conn.QuerySingleOrDefaultAsync<string>(sql, new { user_id = user.Id });
+        ArgumentNullException.ThrowIfNull(user);
 
-        return normalizedUserName;
+        return Task.FromResult(user.NormalizedUserName);
     }
 
-    public async Task SetNormalizedUserNameAsync(User user, string normalizedName, CancellationToken cancellationToken)
+    public Task SetNormalizedUserNameAsync(User user, string normalizedName, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        const string sql = """
-                           update
-                                  users
-                           set
-                                  normalized_name = @normalized_name,
-                                  concurrency_stamp = @new_concurrency_stamp
-                           where
-                                  id = @user_id
-                                  and concurrency_stamp = @concurrency_stamp
-                           """;
-        var newConcurrencyStamp = Guid.NewGuid().ToString();
-        await using var conn = Open();
-        cancellationToken.ThrowIfCancellationRequested();
-        await conn.ExecuteAsync(sql, new
-        {
-            normalized_name = normalizedName,
-            user_id = user.Id,
-            concurrency_stamp = user.ConcurrencyStamp,
-            new_concurrency_stamp = newConcurrencyStamp
-        });
-        //todo: error handling for concurrency
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(normalizedName);
+
+        user.NormalizedUserName = normalizedName.ToUpperInvariant();
+
+        return Task.CompletedTask;
     }
 
     public async Task<IdentityResult> CreateAsync(User user, CancellationToken cancellationToken)
@@ -142,9 +82,10 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
                                    @lockout_enabled, @access_failed_count, @created_at, @updated_at)
                            """;
         var guid = Guid.NewGuid();
+        var concurrencyStamp = Guid.NewGuid().ToString();
         try
         {
-            await using var conn = Open();
+            await using var conn = await OpenAsync(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             var rows = await conn.ExecuteAsync(new CommandDefinition(sql, new
                 {
@@ -156,7 +97,7 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
                     email_confirmed = user.EmailConfirmed,
                     password_hash = user.PasswordHash,
                     security_stamp = user.SecurityStamp,
-                    concurrency_stamp = user.ConcurrencyStamp,
+                    concurrency_stamp = concurrencyStamp,
                     phone_number = user.PhoneNumber,
                     phone_number_confirmed = user.PhoneNumberConfirmed,
                     two_factor_enabled = user.TwoFactorEnabled,
@@ -167,6 +108,7 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
                     updated_at = user.UpdatedAt
                 },
                 cancellationToken: cancellationToken));
+            user.Id = guid;
 
             return IdentityResult.Success;
         }
@@ -183,32 +125,47 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
     public async Task<IdentityResult> UpdateAsync(User user, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        const string sql = """
-                           update users
-                           set 
-                               user_name = @user_name,
-                               normalized_user_name = @normalized_user_name,
-                               email = @email,
-                               normalized_email = @normalized_email,
-                               password_hash = @password_hash,
-                               security_stamp = @security_stamp,
-                               concurrency_stamp = @new_concurrency_stamp,
-                               phone_number = @phone_number, 
-                               phone_number_confirmed = @phone_number_confirmed,  
-                               two_factor_enabled = @two_factor_enabled, 
-                               lockout_end = @lockout_end,
-                               lockout_enabled = @lockout_enabled, 
-                               access_failed_count = @access_failed_count,
-                               updated_at = @updated_at
-                           where 
-                               id = @id 
-                               and concurrency_stamp = @old_stamp;
-                           """;
+        const string updateUserSql = """
+                                     update users
+                                     set 
+                                         user_name = @user_name,
+                                         normalized_user_name = @normalized_user_name,
+                                         email = @email,
+                                         normalized_email = @normalized_email,
+                                         password_hash = @password_hash,
+                                         security_stamp = @security_stamp,
+                                         concurrency_stamp = @new_concurrency_stamp,
+                                         phone_number = @phone_number, 
+                                         phone_number_confirmed = @phone_number_confirmed,  
+                                         two_factor_enabled = @two_factor_enabled, 
+                                         lockout_end = @lockout_end,
+                                         lockout_enabled = @lockout_enabled, 
+                                         access_failed_count = @access_failed_count,
+                                         updated_at = @updated_at
+                                     where 
+                                         id = @id 
+                                         and concurrency_stamp = @old_stamp;
+                                     """;
+        const string insertRoleSql = """
+                                     insert into user_roles (user_id, role_id) 
+                                     select @user_id, id from roles where normalized_name = @role_name
+                                     on CONFLICT DO NOTHING;
+                                     """;
+        const string deleteRoleSql = """
+                                     delete from user_roles 
+                                     where user_id = @user_id 
+                                     and role_id = (
+                                        select id 
+                                        from roles 
+                                        where normalized_name = @role_name);
+                                     """;
         var newConcurrencyStamp = Guid.NewGuid().ToString();
-        var now = DateTime.UtcNow;
-        await using var conn = Open();
-        var rows = await conn.ExecuteAsync(new CommandDefinition(sql,
-            new
+        await using var conn = await OpenAsync(cancellationToken);
+        await using var transaction = await conn.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            var rows = await conn.ExecuteAsync(new CommandDefinition(updateUserSql, new
             {
                 id = user.Id,
                 old_stamp = user.ConcurrencyStamp,
@@ -225,20 +182,42 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
                 lockout_enabled = user.LockoutEnabled,
                 lockout_end = user.LockoutEnd,
                 access_failed_count = user.AccessFailedCount,
-                updated_at = user.UpdatedAt
-            }, cancellationToken: cancellationToken));
-        if (rows != 0)
-        {
+                updated_at = DateTime.UtcNow
+            }, transaction: transaction, cancellationToken: cancellationToken));
+
+            if (rows == 0)
+            {
+                return IdentityResult.Failed(new IdentityError
+                    { Code = "ConcurrencyFailure", Description = "Concurrent update failure" });
+            }
+
+            foreach (var roleName in user.RolesToAdd)
+            {
+                await conn.ExecuteAsync(new CommandDefinition(insertRoleSql,
+                    new { user_id = user.Id, role_name = roleName.ToUpper() },
+                    transaction: transaction, cancellationToken: cancellationToken));
+            }
+
+            foreach (var roleName in user.RolesToRemove)
+            {
+                await conn.ExecuteAsync(new CommandDefinition(deleteRoleSql,
+                    new { user_id = user.Id, role_name = roleName.ToUpper() },
+                    transaction: transaction, cancellationToken: cancellationToken));
+            }
+
+            await transaction.CommitAsync(cancellationToken);
+
             user.ConcurrencyStamp = newConcurrencyStamp;
+            user.RolesToAdd.Clear();
+            user.RolesToRemove.Clear();
 
             return IdentityResult.Success;
         }
-
-        return IdentityResult.Failed(new IdentityError()
+        catch (Exception)
         {
-            Code = "ConcurrencyFailure",
-            Description = "Concurrent update failure"
-        });
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 
     public async Task<IdentityResult> DeleteAsync(User user, CancellationToken cancellationToken)
@@ -249,7 +228,7 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
                            where
                                id = @user_id and concurrency_stamp = @concurrency_stamp
                            """;
-        await using var conn = Open();
+        await using var conn = await OpenAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         var rows = await conn.ExecuteAsync(new CommandDefinition(sql,
             new { user_id = user.Id, concurrency_stamp = user.ConcurrencyStamp },
@@ -270,17 +249,15 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
     {
         cancellationToken.ThrowIfCancellationRequested();
         const string getUserSql = """
-                                         select
-                                               id,
-                                               user_name,
-                                               email,
-                                               password_hash,
-                                               created_at,
-                                               updated_at
-                                          from 
-                                               users 
-                                          where 
-                                               id = @id
+                                      select
+                                          id, user_name, normalized_user_name, email, normalized_email,
+                                          email_confirmed, password_hash, security_stamp, concurrency_stamp,
+                                          phone_number, phone_number_confirmed, two_factor_enabled, lockout_end,
+                                          lockout_enabled, access_failed_count, created_at, updated_at
+                                      from 
+                                          users 
+                                      where 
+                                          id = @id
                                   """;
         const string getUserRoleSql = """
                                       select
@@ -288,16 +265,30 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
                                             r.name
                                       from
                                             roles r
-                                      inner join user_roles ur on r.id = user_roles.user_id
+                                      inner join user_roles ur on ur.role_id = r.id
                                       where
                                             ur.user_id = @user_id;
                                       """;
 
-        await using var conn = Open();
+        await using var conn = await OpenAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
-        var user = await conn.QuerySingleOrDefaultAsync<User>(getUserSql, new { id = userId });
-        var role = await conn.QuerySingleOrDefaultAsync<Role>(getUserRoleSql, new { user_id = userId });
-        user.Role = role;
+        var user = await conn.QuerySingleOrDefaultAsync<User>(new CommandDefinition(getUserSql, new
+        {
+            id = userId
+        }, cancellationToken: cancellationToken));
+        if (user is null)
+        {
+            return null;
+        }
+
+        var roles = await conn.QueryAsync<Role>(new CommandDefinition(getUserRoleSql, new
+        {
+            user_id = userId
+        }, cancellationToken: cancellationToken));
+        foreach (var role in roles)
+        {
+            user.Roles.Add(role);
+        }
 
         return user;
     }
@@ -306,16 +297,15 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
     {
         cancellationToken.ThrowIfCancellationRequested();
         const string getUserSql = """
-                                  select
-                                        id,
-                                        username,
-                                        normalized_username,
-                                        email,
-                                        password_hash
-                                   from 
-                                        users
-                                   where 
-                                        normalized_username = @normalizedUserName
+                                      select
+                                          id, user_name, normalized_user_name, email, normalized_email,
+                                          email_confirmed, password_hash, security_stamp, concurrency_stamp,
+                                          phone_number, phone_number_confirmed, two_factor_enabled, lockout_end,
+                                          lockout_enabled, access_failed_count, created_at, updated_at
+                                      from 
+                                          users 
+                                      where 
+                                          id = @id
                                   """;
         const string getUserRoleSql = """
                                       select
@@ -323,94 +313,89 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
                                             r.name
                                       from
                                             roles r
-                                      inner join user_roles ur on r.id = user_roles.user_id
+                                      inner join user_roles ur on ur.role_id = r.id
                                       where
                                             ur.user_id = @user_id;
                                       """;
 
-        await using var conn = Open();
+        await using var conn = await OpenAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
-        var user = await conn.QuerySingleOrDefaultAsync<User>(
-            getUserSql, new { normalizedUserName = normalizedUserName });
-        var role = await conn.QuerySingleOrDefaultAsync<Role>(getUserRoleSql, new { user_id = user.Id });
-        user.Role = role;
+        var user = await conn.QuerySingleOrDefaultAsync<User>(new CommandDefinition(getUserSql, new
+        {
+            normalizedUserName = normalizedUserName
+        }, cancellationToken: cancellationToken));
+        if (user is null)
+        {
+            return null;
+        }
+
+        var roles = await conn.QueryAsync<Role>(new CommandDefinition(getUserRoleSql, new
+        {
+            user_id = user.Id
+        }, cancellationToken: cancellationToken));
+        foreach (var role in roles)
+        {
+            user.Roles.Add(role);
+        }
 
         return user;
     }
 
-    public async Task SetPasswordHashAsync(User user, string passwordHash, CancellationToken cancellationToken)
+    public Task SetPasswordHashAsync(User user, string passwordHash, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        const string sql = """
-                           update
-                                users
-                           set
-                                password_hash = @password_hash,
-                                concurrency_stamp = @new_concurrency_stamp
-                           where
-                                id = @user_id
-                                and concurrency_stamp = @concurrency_stamp
-                           """;
-        var newConcurrencyStamp = Guid.NewGuid().ToString();
-        await using var conn = Open();
-        cancellationToken.ThrowIfCancellationRequested();
-        await conn.ExecuteAsync(sql,
-            new
-            {
-                password_hash = passwordHash,
-                user_id = user.Id,
-                concurrency_stamp = user.ConcurrencyStamp,
-                new_concurrency_stamp = newConcurrencyStamp
-            });
-        //todo: error handling for concurrency
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(passwordHash);
+
+        user.PasswordHash = passwordHash;
+
+        return Task.CompletedTask;
     }
 
-    public async Task<string> GetPasswordHashAsync(User user, CancellationToken cancellationToken)
+    public Task<string> GetPasswordHashAsync(User user, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        const string sql = """
-                           select 
-                                 password_hash
-                           from
-                                 users
-                           where
-                                 id = @user_id
-                           """;
-        await using var conn = Open();
-        cancellationToken.ThrowIfCancellationRequested();
-        var passwordHash = await conn.QuerySingleOrDefaultAsync<string>(sql, new { user_id = user.Id });
+        ArgumentNullException.ThrowIfNull(user);
 
-        return passwordHash;
+        return Task.FromResult(user.PasswordHash);
     }
 
-    public async Task<bool> HasPasswordAsync(User user, CancellationToken cancellationToken)
+    public Task<bool> HasPasswordAsync(User user, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        const string sql = """
-                           select 
-                                 password_hash
-                           from
-                                 users
-                           where
-                                 id = @user_id
-                           """;
-        await using var conn = Open();
-        cancellationToken.ThrowIfCancellationRequested();
-        var passwordHash = await conn.QuerySingleOrDefaultAsync<string>(sql, new { user_id = user.Id });
+        ArgumentNullException.ThrowIfNull(user);
 
-        return passwordHash != null;
+        return Task.FromResult(user.PasswordHash != null);
     }
 
-    public async Task AddToRoleAsync(User user, string roleName, CancellationToken cancellationToken)
+    public Task AddToRoleAsync(User user, string roleName, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(roleName);
+
+        user.RolesToRemove.Remove(roleName);
+        if (!user.RolesToAdd.Contains(roleName))
+        {
+            user.RolesToAdd.Add(roleName);
+        }
+
+        return Task.CompletedTask;
     }
 
-    public async Task RemoveFromRoleAsync(User user, string roleName, CancellationToken cancellationToken)
+    public Task RemoveFromRoleAsync(User user, string roleName, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(roleName);
+
+        user.RolesToAdd.Remove(roleName);
+        if (!user.RolesToRemove.Contains(roleName))
+        {
+            user.RolesToRemove.Add(roleName);
+        }
+
+        return Task.CompletedTask;
     }
 
     public async Task<IList<string>> GetRolesAsync(User user, CancellationToken cancellationToken)
@@ -418,17 +403,22 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
         cancellationToken.ThrowIfCancellationRequested();
         const string sql = """
                            select
-                                 r.id,
-                                 r.name,
+                                 r.name
                            from
-                                 roles r 
-                           inner join user_roles ur on r.id = ur.user_id
+                                 roles r
+                           inner join 
+                                     user_roles ur on ur.role_id = r.id
                            where
                                  ur.user_id = @user_id
                            """;
-        await using var conn = Open();
+        await using var conn = await OpenAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
-        throw new NotImplementedException();
+        var roles = await conn.QueryAsync<string>(new CommandDefinition(sql, new
+        {
+            user_id = user.Id
+        }, cancellationToken: cancellationToken));
+
+        return roles.ToList();
     }
 
     public async Task<bool> IsInRoleAsync(User user, string roleName, CancellationToken cancellationToken)
@@ -436,17 +426,25 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
         cancellationToken.ThrowIfCancellationRequested();
         const string sql = """
                            select 
-                                 u.id,
+                                 u.id
                            from 
                                  users u
-                           inner join user_roles ur on ur.user_id = u.id
-                           inner join roles r on r.id = ur.role_id
+                           inner join 
+                                     user_roles ur on ur.user_id = u.id
+                           inner join 
+                                     roles r on r.id = ur.role_id
                            where 
-                                 u.id = @user_id and r.name = @role_name
+                                 u.id = @user_id and r.normalized_name = @role_name
                            """;
-        await using var conn = Open();
+        await using var conn = await OpenAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
-        throw new NotImplementedException();
+        var id = await conn.QuerySingleOrDefaultAsync<Guid?>(new CommandDefinition(sql, new
+        {
+            user_id = user.Id,
+            role_name = roleName.ToUpperInvariant()
+        }, cancellationToken: cancellationToken));
+
+        return id != null;
     }
 
     public async Task<IList<User>> GetUsersInRoleAsync(string roleName, CancellationToken cancellationToken)
@@ -456,177 +454,145 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
                            select
                                  u.id,
                                  u.user_name,
+                                 u.normalized_user_name,
                                  u.email,
-                                 u.password_hash
-                           from user u
-                           inner join user_roles ur on u.id = ur.user_id
-                           inner join roles r on ur.role_id = r.id
-                           where r.name = @role_name
+                                 u.normalized_email,
+                                 u.email_confirmed,
+                                 u.password_hash,
+                                 u.security_stamp,
+                                 u.concurrency_stamp,
+                                 u.phone_number,
+                                 u.phone_number_confirmed,
+                                 u.two_factor_enabled,
+                                 u.lockout_end,
+                                 u.lockout_enabled,
+                                 u.access_failed_count,
+                                 u.created_at,
+                                 u.updated_at
+                           from 
+                               users u
+                           inner join 
+                                   user_roles ur on u.id = ur.user_id
+                           inner join 
+                                   roles r on ur.role_id = r.id
+                           where 
+                               r.normalized_name = @role_name
                            """;
-        await using var conn = Open();
+        await using var conn = await OpenAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
-        throw new NotImplementedException();
-    }
-
-    public async Task SetEmailAsync(User user, string email, CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        const string sql = """
-                           update 
-                                 users
-                           set
-                               email = @email,
-                               concurrency_stamp = @new_concurrency_stamp
-                           where
-                               id = @user_id
-                               and concurrency_stamp = @concurrency_stamp
-                           """;
-        var newConcurrencyStamp = Guid.NewGuid().ToString();
-        await using var conn = Open();
-        cancellationToken.ThrowIfCancellationRequested();
-        await conn.ExecuteAsync(sql,
-            new
-            {
-                email = email,
-                user_id = user.Id,
-                concurrency_stamp = user.ConcurrencyStamp,
-                new_concurrency_stamp = newConcurrencyStamp
-            });
-        //todo: error handling for concurrency
-    }
-
-    public async Task<string> GetEmailAsync(User user, CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        const string sql = """
-                           select 
-                                 email
-                           from
-                                 users
-                           where
-                                 id = @user_id
-                           """;
-        await using var conn = Open();
-        cancellationToken.ThrowIfCancellationRequested();
-        var email = await conn.QuerySingleOrDefaultAsync<string>(sql, new { user_id = user.Id });
-
-        return email;
-    }
-
-    public async Task<bool> GetEmailConfirmedAsync(User user, CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        const string sql = """
-                           select 
-                                 email_confirmed
-                           from
-                                 users
-                           where
-                                 id = @user_id
-                           """;
-        await using var conn = Open();
-        cancellationToken.ThrowIfCancellationRequested();
-        var emailConfirmed = await conn.QuerySingleOrDefaultAsync<bool>(sql, new { user_id = user.Id });
-
-        return emailConfirmed;
-    }
-
-    public async Task SetEmailConfirmedAsync(User user, bool confirmed, CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        const string sql = """
-                           update 
-                                 users
-                           set
-                               email_confirmed = @confirmed,
-                               concurrency_stamp = @new_concurrency_stamp
-                           where
-                               id = @user_id
-                               and concurrency_stamp = @concurrency_stamp
-                           """;
-        var newConcurrencyStamp = Guid.NewGuid().ToString();
-        await using var conn = Open();
-        cancellationToken.ThrowIfCancellationRequested();
-        await conn.ExecuteAsync(sql, new
+        var users = await conn.QueryAsync<User>(new CommandDefinition(sql, new
         {
-            confirmed = confirmed,
-            user_id = user.Id,
-            concurrrency_stamp = user.ConcurrencyStamp,
-            new_concurrency_stamp = newConcurrencyStamp
-        });
-        //todo: error handling for concurrency
+            role_name = roleName.ToUpperInvariant()
+        }, cancellationToken: cancellationToken));
+
+        return new List<User>(users);
+    }
+
+    public Task SetEmailAsync(User user, string email, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(email);
+
+        user.Email = email;
+
+        return Task.CompletedTask;
+    }
+
+    public Task<string> GetEmailAsync(User user, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(user);
+
+        return Task.FromResult(user.Email);
+    }
+
+    public Task<bool> GetEmailConfirmedAsync(User user, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(user);
+
+        return Task.FromResult(user.EmailConfirmed);
+    }
+
+    public Task SetEmailConfirmedAsync(User user, bool confirmed, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(user);
+        user.EmailConfirmed = confirmed;
+
+        return Task.CompletedTask;
     }
 
     public async Task<User> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         const string sql = """
-                           select
-                               id,
-                               username,
-                               normalized_email,
-                               email,
-                               password_hash
-                           from 
-                               users
-                           where 
-                               normalized_email = @normalizedEmail
+                               select
+                                   id, user_name, normalized_user_name, email, normalized_email,
+                                   email_confirmed, password_hash, security_stamp, concurrency_stamp,
+                                   phone_number, phone_number_confirmed, two_factor_enabled, lockout_end,
+                                   lockout_enabled, access_failed_count, created_at, updated_at
+                               from 
+                                   users 
+                               where 
+                                   id = @id
                            """;
-        await using var conn = Open();
+        const string getUserRoleSql = """
+                                      select
+                                            r.id,
+                                            r.name
+                                      from
+                                            roles r
+                                      inner join user_roles ur on ur.role_id = r.id
+                                      where
+                                            ur.user_id = @user_id;
+                                      """;
+        await using var conn = await OpenAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
-        var user = conn.QuerySingleOrDefault<User>(sql, new { normalizedEmail = normalizedEmail });
+        var user = await conn.QuerySingleOrDefaultAsync<User>(new CommandDefinition(sql, new
+        {
+            normalizedEmail = normalizedEmail
+        }, cancellationToken: cancellationToken));
+        if (user == null)
+        {
+            return null;
+        }
+
+        var roles = await conn.QueryAsync<Role>(new CommandDefinition(getUserRoleSql, new
+        {
+            user_id = user.Id
+        }, cancellationToken: cancellationToken));
+        foreach (var role in roles)
+        {
+            user.Roles.Add(role);
+        }
 
         return user;
     }
 
-    public async Task<string> GetNormalizedEmailAsync(User user, CancellationToken cancellationToken)
+    public Task<string> GetNormalizedEmailAsync(User user, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        const string sql = """
-                           select 
-                                 normalized_email
-                           from
-                                 users
-                           where
-                                 id = @user_id
-                           """;
-        await using var conn = Open();
-        cancellationToken.ThrowIfCancellationRequested();
-        var normalizedEmail = await conn.QuerySingleOrDefaultAsync<string>(sql, new { user_id = user.Id });
+        ArgumentNullException.ThrowIfNull(user);
 
-        return normalizedEmail;
+        return Task.FromResult(user.NormalizedEmail);
     }
 
-    public async Task SetNormalizedEmailAsync(User user, string normalizedEmail, CancellationToken cancellationToken)
+    public Task SetNormalizedEmailAsync(User user, string normalizedEmail, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var sql = """
-                  update 
-                        users
-                  set
-                        normalized_email = @normalized_email,
-                        concurrency_stamp = @new_concurrency_stamp
-                  where
-                      id = @user_id
-                      and concurrency_stamp = @concurrency_stamp
-                  """;
-        var newConcurrencyStamp = Guid.NewGuid().ToString();
-        await using var conn = Open();
-        cancellationToken.ThrowIfCancellationRequested();
-        await conn.ExecuteAsync(sql, new
-        {
-            normalized_email = normalizedEmail,
-            user_id = user.Id,
-            concurrency_stamp = user.ConcurrencyStamp,
-            new_concurrency_stamp = newConcurrencyStamp
-        });
-        //todo: error handling for concurrency
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(normalizedEmail);
+        user.NormalizedEmail = normalizedEmail.ToUpperInvariant();
+
+        return Task.CompletedTask;
     }
 
-    private NpgsqlConnection Open()
+    private async Task<NpgsqlConnection> OpenAsync(CancellationToken ct)
     {
         var conn = new NpgsqlConnection(_connectionString);
-        conn.Open();
+        await conn.OpenAsync(ct);
 
         return conn;
     }
