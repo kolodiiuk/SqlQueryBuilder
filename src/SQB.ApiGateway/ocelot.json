@@ -1,7 +1,7 @@
 ﻿{
   "Routes": [
     {
-      "DownstreamPathTemplate": "/api/auth/register",
+      "DownstreamPathTemplate": "/api/auth/sign-up",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
@@ -9,14 +9,14 @@
           "Port": 5279
         }
       ],
-      "UpstreamPathTemplate": "/api/auth/register",
+      "UpstreamPathTemplate": "/api/auth/sign-up",
       "UpstreamHttpMethod": [
         "POST"
       ],
       "SwaggerKey": "auth"
     },
     {
-      "DownstreamPathTemplate": "/api/auth/login",
+      "DownstreamPathTemplate": "/api/auth/sign-in",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
@@ -24,7 +24,7 @@
           "Port": 5279
         }
       ],
-      "UpstreamPathTemplate": "/api/auth/login",
+      "UpstreamPathTemplate": "/api/auth/sign-in",
       "UpstreamHttpMethod": [
         "POST"
       ],
@@ -46,7 +46,7 @@
       "SwaggerKey": "auth"
     },
     {
-      "DownstreamPathTemplate": "/api/auth/logout",
+      "DownstreamPathTemplate": "/api/auth/sign-out",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
@@ -54,7 +54,7 @@
           "Port": 5279
         }
       ],
-      "UpstreamPathTemplate": "/api/auth/logout",
+      "UpstreamPathTemplate": "/api/auth/sign-out",
       "UpstreamHttpMethod": [
         "POST"
       ],
@@ -87,6 +87,21 @@
       "UpstreamPathTemplate": "/api/auth/create-admin",
       "UpstreamHttpMethod": [
         "POST"
+      ],
+      "SwaggerKey": "auth"
+    },
+    {
+      "DownstreamPathTemplate": "/api/auth/change-password",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5279
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth/change-password",
+      "UpstreamHttpMethod": [
+        "PATCH"
       ],
       "SwaggerKey": "auth"
     }
