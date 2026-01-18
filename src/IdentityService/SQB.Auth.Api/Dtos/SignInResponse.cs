@@ -1,6 +1,6 @@
 namespace SQB.Auth.Dtos;
 
-public class LoginResponse
+public class SignInResponse
 {
     public string Token { get; set; }
 
