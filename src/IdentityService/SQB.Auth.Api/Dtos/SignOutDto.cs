@@ -1,6 +1,6 @@
 namespace SQB.Auth.Dtos;
 
-public class LogoutDto
+public class SignOutDto
 {
     public string RefreshToken { get; set; }
 }
