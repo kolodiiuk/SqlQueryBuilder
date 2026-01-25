@@ -43,9 +43,6 @@ builder.WebHost.ConfigureKestrel(options => { options.AddServerHeader = false; }
 
 DefaultTypeMap.MatchNamesWithUnderscores = true;
 
-builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
-builder.Services.Configure<ConnectionStringsOptions>(builder.Configuration.GetSection("ConnectionStrings"));
-
 builder.Services.RegisterServices();
 builder.Services.RegisterRepositories();
 
@@ -54,6 +51,7 @@ builder.Services.Configure<IdentityStoreOptions>(options =>
 {
     options.ConnectionString = configuration.GetConnectionString("Identity");
 });
+builder.Services.Configure<JwtOptions>(configuration.GetSection("Jwt"));
 builder.Services.AddIdentityCore<User>(options =>
     {
         options.Password.RequireDigit = true;
