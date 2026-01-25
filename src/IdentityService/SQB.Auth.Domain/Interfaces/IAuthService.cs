@@ -6,17 +6,19 @@ namespace SQB.Auth.Domain.Interfaces;
 
 public interface IAuthService
 {
-    Task<Result<User>> ValidateUserCredentials(string email, string password, CancellationToken ct);
+    Task<Result<User>> ValidateUserCredentialsAsync(string email, string password, CancellationToken ct);
 
-    Task<(string token, string refreshToken)> GenerateTokens(User user, CancellationToken ct);
+    Task<Result<TokensResponse>> GenerateTokensAsync(User user, CancellationToken ct);
 
-    Task<Result> RegisterAsync(User user, string password, CancellationToken ct);
+    Task<Result> RegisterUserAsync(User user, string password, CancellationToken ct);
 
     Task<Result<RefreshTokenResponse>> RefreshTokenAsync(string token, CancellationToken ct);
 
-    Task<Result> LogoutAsync(string token, CancellationToken ct);
+    Task<Result> SignOutAsync(string token, CancellationToken ct);
 
     Task<Result<UserInfo>> GetUserAsync(Guid userId, CancellationToken ct);
 
     Task<Result> RegisterAdminAsync(User user, string registerRequestPassword, CancellationToken ct);
+
+    Task<Result> ChangePasswordAsync(Guid userId, string oldPassword, string newPassword, CancellationToken ct);
 }
