@@ -11,9 +11,8 @@ create table users
     email_confirmed        boolean                  not null,
     password_hash          text,
     security_stamp         text,
-    concurrency_stamp      text,
-    phone_number           varchar(30)              not null,
-    phone_number_confirmed boolean                  not null,
+    concurrency_stamp      text,    phone_number           varchar(30),
+    phone_number_confirmed boolean,
     two_factor_enabled     boolean                  not null,
     lockout_end            timestamp with time zone,
     lockout_enabled        boolean                  not null,
@@ -51,7 +50,7 @@ create unique index role_name_index
 -------------------- user roles --------------------
 create table user_roles
 (
-    user_id integer not null
+    user_id uuid not null
         constraint fk_user_roles_users_user_id
             references users
             on delete cascade,

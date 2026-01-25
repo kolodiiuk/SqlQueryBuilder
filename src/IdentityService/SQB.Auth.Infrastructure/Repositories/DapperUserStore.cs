@@ -7,11 +7,11 @@ using SQB.Auth.Domain.Models;
 
 namespace SQB.Auth.Infrastructure.Repositories;
 
-public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, IUserEmailStore<User>
+public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, IUserEmailStore<User>
 {
     private readonly string _connectionString;
 
-    public CustomUserStore(IOptions<IdentityStoreOptions> options)
+    public DapperUserStore(IOptions<IdentityStoreOptions> options)
     {
         _connectionString = options.Value.ConnectionString;
     }
@@ -81,7 +81,7 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
                                    @phone_number, @phone_number_confirmed, @two_factor_enabled, @lockout_end,
                                    @lockout_enabled, @access_failed_count, @created_at, @updated_at)
                            """;
-        var guid = Guid.NewGuid();
+        var guid = user.Id == Guid.Empty ? Guid.NewGuid() : user.Id;
         var concurrencyStamp = Guid.NewGuid().ToString();
         try
         {
@@ -109,6 +109,7 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
                 },
                 cancellationToken: cancellationToken));
             user.Id = guid;
+            user.ConcurrencyStamp = concurrencyStamp;
 
             return IdentityResult.Success;
         }
@@ -132,6 +133,7 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
                                          normalized_user_name = @normalized_user_name,
                                          email = @email,
                                          normalized_email = @normalized_email,
+                                         email_confirmed = @email_confirmed,
                                          password_hash = @password_hash,
                                          security_stamp = @security_stamp,
                                          concurrency_stamp = @new_concurrency_stamp,
@@ -174,6 +176,7 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
                 normalized_user_name = user.NormalizedUserName,
                 email = user.Email,
                 normalized_email = user.NormalizedEmail,
+                email_confirmed = user.EmailConfirmed,
                 password_hash = user.PasswordHash,
                 security_stamp = user.SecurityStamp,
                 phone_number = user.PhoneNumber,
@@ -248,97 +251,96 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
     public async Task<User> FindByIdAsync(string userId, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        const string getUserSql = """
-                                      select
-                                          id, user_name, normalized_user_name, email, normalized_email,
-                                          email_confirmed, password_hash, security_stamp, concurrency_stamp,
-                                          phone_number, phone_number_confirmed, two_factor_enabled, lockout_end,
-                                          lockout_enabled, access_failed_count, created_at, updated_at
-                                      from 
-                                          users 
-                                      where 
-                                          id = @id
-                                  """;
-        const string getUserRoleSql = """
-                                      select
-                                            r.id,
-                                            r.name
-                                      from
-                                            roles r
-                                      inner join user_roles ur on ur.role_id = r.id
-                                      where
-                                            ur.user_id = @user_id;
-                                      """;
-
-        await using var conn = await OpenAsync(cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-        var user = await conn.QuerySingleOrDefaultAsync<User>(new CommandDefinition(getUserSql, new
-        {
-            id = userId
-        }, cancellationToken: cancellationToken));
-        if (user is null)
+        if (!Guid.TryParse(userId, out var id))
         {
             return null;
         }
 
-        var roles = await conn.QueryAsync<Role>(new CommandDefinition(getUserRoleSql, new
-        {
-            user_id = userId
-        }, cancellationToken: cancellationToken));
-        foreach (var role in roles)
-        {
-            user.Roles.Add(role);
-        }
+        const string sql = """
+                           select
+                                 u.id, u.user_name, u.normalized_user_name, u.email, u.normalized_email,
+                                 u.email_confirmed, u.password_hash, u.security_stamp, u.concurrency_stamp,
+                                 u.phone_number, u.phone_number_confirmed, u.two_factor_enabled, u.lockout_end,
+                                 u.lockout_enabled, u.access_failed_count, u.created_at, u.updated_at,
+                                 r.id, r.name
+                           from
+                                users u
+                           left join user_roles ur on u.id = ur.user_id
+                           left join roles r on r.id = ur.role_id
+                           where u.id = @id
+                           """;
+        await using var conn = await OpenAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        var lookup = new Dictionary<Guid, User>();
+        await conn.QueryAsync<User, Role, User>(
+            new CommandDefinition(sql, new { id = id }, cancellationToken: cancellationToken),
+            (user, role) =>
+            {
+                if (!lookup.TryGetValue(user.Id, out var trackedUser))
+                {
+                    trackedUser = user;
+                    trackedUser.Roles = new List<Role>();
+                    trackedUser.RolesToAdd.Clear();
+                    trackedUser.RolesToRemove.Clear();
+                    lookup.Add(trackedUser.Id, trackedUser);
+                }
 
-        return user;
+                if (role != null && role.Id != 0)
+                {
+                    trackedUser.Roles.Add(role);
+                }
+
+                return trackedUser;
+            },
+            splitOn: "id");
+
+        return lookup.Values.SingleOrDefault();
     }
 
     public async Task<User> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        const string getUserSql = """
-                                      select
-                                          id, user_name, normalized_user_name, email, normalized_email,
-                                          email_confirmed, password_hash, security_stamp, concurrency_stamp,
-                                          phone_number, phone_number_confirmed, two_factor_enabled, lockout_end,
-                                          lockout_enabled, access_failed_count, created_at, updated_at
-                                      from 
-                                          users 
-                                      where 
-                                          id = @id
-                                  """;
-        const string getUserRoleSql = """
-                                      select
-                                            r.id,
-                                            r.name
-                                      from
-                                            roles r
-                                      inner join user_roles ur on ur.role_id = r.id
-                                      where
-                                            ur.user_id = @user_id;
-                                      """;
+        const string sql = """
+                           select
+                                 u.id, u.user_name, u.normalized_user_name, u.email, u.normalized_email,
+                                 u.email_confirmed, u.password_hash, u.security_stamp, u.concurrency_stamp,
+                                 u.phone_number, u.phone_number_confirmed, u.two_factor_enabled, u.lockout_end,
+                                 u.lockout_enabled, u.access_failed_count, u.created_at, u.updated_at,
+                                 r.id, r.name
+                           from
+                                users u
+                           left join user_roles ur on u.id = ur.user_id
+                           left join roles r on r.id = ur.role_id
+                           where u.normalized_user_name = @normalized_user_name
+                           """;
 
         await using var conn = await OpenAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
-        var user = await conn.QuerySingleOrDefaultAsync<User>(new CommandDefinition(getUserSql, new
-        {
-            normalizedUserName = normalizedUserName
-        }, cancellationToken: cancellationToken));
-        if (user is null)
-        {
-            return null;
-        }
+        var lookup = new Dictionary<Guid, User>();
+        await conn.QueryAsync<User, Role, User>(
+            new CommandDefinition(sql, new { normalized_user_name = normalizedUserName },
+                cancellationToken: cancellationToken),
+            (user, role) =>
+            {
+                if (!lookup.TryGetValue(user.Id, out var trackedUser))
+                {
+                    trackedUser = user;
+                    trackedUser.Roles = new List<Role>();
+                    trackedUser.RolesToAdd.Clear();
+                    trackedUser.RolesToRemove.Clear();
+                    lookup.Add(trackedUser.Id, trackedUser);
+                }
 
-        var roles = await conn.QueryAsync<Role>(new CommandDefinition(getUserRoleSql, new
-        {
-            user_id = user.Id
-        }, cancellationToken: cancellationToken));
-        foreach (var role in roles)
-        {
-            user.Roles.Add(role);
-        }
+                if (role != null && role.Id != 0)
+                {
+                    trackedUser.Roles.Add(role);
+                }
 
-        return user;
+                return trackedUser;
+            },
+            splitOn: "id");
+
+        return lookup.Values.SingleOrDefault();
     }
 
     public Task SetPasswordHashAsync(User user, string passwordHash, CancellationToken cancellationToken)
@@ -536,7 +538,7 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
                                from 
                                    users 
                                where 
-                                   id = @id
+                                   normalized_email = @normalized_email
                            """;
         const string getUserRoleSql = """
                                       select
@@ -552,7 +554,7 @@ public class CustomUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
         cancellationToken.ThrowIfCancellationRequested();
         var user = await conn.QuerySingleOrDefaultAsync<User>(new CommandDefinition(sql, new
         {
-            normalizedEmail = normalizedEmail
+            normalized_email = normalizedEmail.ToUpperInvariant()
         }, cancellationToken: cancellationToken));
         if (user == null)
         {
