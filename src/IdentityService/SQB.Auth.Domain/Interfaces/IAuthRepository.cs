@@ -6,15 +6,16 @@ namespace SQB.Auth.Domain.Interfaces;
 
 public interface IAuthRepository
 {
-    Task<Result<UserInfo>> GetUserById(Guid userId);
+    // Task<Result> RevokeRefreshTokenByIpAsync(string ip, CancellationToken ct);
 
-    Task<Result> RevokeRefreshTokenAsync(UserRefreshToken rt);
+    Task<Result<RefreshToken>> GetRefreshTokenByValueAsync(string token, CancellationToken ct);
 
-    Task<Result<UserRefreshToken>> GetRefreshTokenByValueAsync(string token);
+    Task<Result> AddRefreshTokenWithRevocationAsync(
+        RefreshToken newRefreshToken, RefreshToken oldRefreshToken, CancellationToken ct);
 
-    Task<Result<User>> GetUserByEmail(string email);
+    Task<Result> RevokeRefreshTokenByValueAsync(RefreshToken value, CancellationToken ct);
 
-    Task<Result> AddRefreshTokensAsync(UserRefreshToken userRefreshToken);
+    Task<Result> AddRefreshTokenAsync(RefreshToken refreshToken, CancellationToken ct);
 
-    Task<Result<UserRefreshToken>> GetRefreshTokenByValueToRefreshAsync(string token);
+    Task<Result> RevokeTokenFamilyAsync(Guid userId, CancellationToken ct);
 }

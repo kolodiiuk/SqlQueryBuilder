@@ -57,7 +57,7 @@ public class AuthController : BaseController<AuthController>
             Email = signUpRequest.Email,
         };
 
-        var result = await _authService.SignUpAsync(user, signUpRequest.Password, ct);
+        var result = await _authService.RegisterUserAsync(user, signUpRequest.Password, ct);
         result.OnSuccess(() => Log(LogLevel.Information, AuthControllerEventIds.SignUpSuccess,
                 "Successfully registered user with email: {Email}", signUpRequest.Email))
             .OnFailure(() => Log(LogLevel.Error, AuthControllerEventIds.SignUpFailed,
@@ -146,7 +146,7 @@ public class AuthController : BaseController<AuthController>
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        var validationResult = await _authService.ValidateUserCredentials(request.Email, request.Password, ct);
+        var validationResult = await _authService.ValidateUserCredentialsAsync(request.Email, request.Password, ct);
         validationResult.OnFailure(() => Log(LogLevel.Warning, AuthControllerEventIds.SignInFailed,
             "Sign in failed for email: {Email}. Error: {Error}", request.Email,
             validationResult.Error));
@@ -158,13 +158,13 @@ public class AuthController : BaseController<AuthController>
                 statusCode: StatusCodes.Status401Unauthorized);
         }
 
-        var tokens = await _authService.GenerateTokens(validationResult.Value, ct);
+        var tokens = await _authService.GenerateTokensAsync(validationResult.Value, ct);
         var tokenExpiration = DateTime.UtcNow.AddMinutes(
             Convert.ToDouble(_configuration["Jwt:TokenExpirationMinutes"]));
         var response = new SignInResponse
         {
-            Token = tokens.Token,
-            RefreshToken = tokens.RefreshToken,
+            Token = tokens.Value.Token,
+            RefreshToken = tokens.Value.RefreshToken,
             Expiration = tokenExpiration,
             User = new UserDto
             {

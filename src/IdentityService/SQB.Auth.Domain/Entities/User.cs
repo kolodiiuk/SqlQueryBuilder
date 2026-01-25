@@ -10,7 +10,7 @@ public class User : IdentityUser<Guid>
 
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-    public ICollection<UserRefreshToken> RefreshTokens { get; set; }
+    public ICollection<RefreshToken> RefreshTokens { get; set; }
 
     public List<string> RolesToAdd { get; } = new();
 
