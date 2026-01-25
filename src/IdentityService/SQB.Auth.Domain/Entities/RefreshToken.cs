@@ -1,6 +1,6 @@
 namespace SQB.Auth.Domain.Entities;
 
-public class UserRefreshToken
+public class RefreshToken
 {
     public int Id { get; set; }
 
@@ -16,9 +16,9 @@ public class UserRefreshToken
 
     public DateTime? Revoked { get; set; }
 
-    public string? RevokedByIp { get; set; }
+    public string RevokedByIp { get; set; }
 
-    public string? ReplacedByToken { get; set; }
+    public string ReplacedByToken { get; set; }
 
     public bool IsExpired => DateTime.UtcNow >= Expires;
 

@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Configuration;
+using SQB.Auth.Application.Options;
 using SQB.Auth.Domain.Entities;
 using SQB.Auth.Domain.Interfaces;
 using SQB.Auth.Domain.Models;
@@ -10,140 +10,110 @@ namespace SQB.Auth.Application.Services;
 
 public class AuthService : IAuthService
 {
+    private const string UnknownIpAddress = "unknown";
+
+    private const string AdminRoleName = "Admin";
+
+    private const string UserRoleName = "User";
+
     private readonly IAuthRepository _authRepository;
 
     private readonly IJwtService _jwtService;
 
     private readonly UserManager<User> _userManager;
 
-    private readonly IConfiguration _configuration;
-
     private readonly IHttpContextAccessor _httpContextAccessor;
+
+    private readonly JwtOptions _jwtOptions;
 
     public AuthService(IAuthRepository authRepository,
         UserManager<User> userManager,
         IJwtService jwtService,
         IHttpContextAccessor httpContextAccessor,
-        IConfiguration configuration)
+        JwtOptions jwtOptions)
     {
         _authRepository = authRepository;
         _userManager = userManager;
         _jwtService = jwtService;
         _httpContextAccessor = httpContextAccessor;
-        _configuration = configuration;
+        _jwtOptions = jwtOptions;
     }
 
-    public async Task<Result> RegisterAsync(User user, string password,  CancellationToken ct)
-    {
-        user.UserName = user.Email;
+    public async Task<Result> RegisterUserAsync(User user, string password, CancellationToken ct)
+        => await SignUpAsync(user, password, UserRoleName, ct);
 
+    public async Task<Result> RegisterAdminAsync(User user, string password, CancellationToken ct)
+        => await SignUpAsync(user, password, AdminRoleName, ct);
+
+    public async Task<Result<User>> ValidateUserCredentialsAsync(string email, string password, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
         try
         {
-            var result = await _userManager.CreateAsync(user, password);
-            if (!result.Succeeded)
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
             {
-                return Result.Fail($"Failed to create a user: {string.Join(", ",
-                    result.Errors.Select(e => e.Description))}");
+                _userManager.PasswordHasher.HashPassword(new User(), password);
+
+                return Result.Fail<User>("Invalid email or password");
             }
 
-            var roleResult = await _userManager.AddToRoleAsync(user, "User");
-            if (!roleResult.Succeeded)
+            var isPasswordCorrect = await VerifyPasswordAsync(user, password, ct);
+            return isPasswordCorrect switch
             {
-                return Result.Fail(
-                    $"Failed to assign role: {string.Join(", ",
-                        roleResult.Errors.Select(e => e.Description))}");
-            }
-
-            return Result.Success();
+                false => Result.Fail<User>("Invalid email or password"),
+                _ => Result.Success(user)
+            };
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            return Result.Fail<User>("Operation cancelled");
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            throw;
+            return Result.Fail<User>($"Error validating user credentials: {e.Message}");
         }
     }
 
-    public async Task<Result> RegisterAdminAsync(User user, string password,  CancellationToken ct)
+    public async Task<Result<TokensResponse>> GenerateTokensAsync(User user, CancellationToken ct)
     {
-        user.UserName = user.Email;
-
-        try
+        if (user == null)
         {
-            var result = await _userManager.CreateAsync(user, password);
-            if (!result.Succeeded)
-            {
-                return Result.Fail($"Failed to create a user: {string.Join(", ",
-                    result.Errors.Select(e => e.Description))}");
-            }
-
-            var roleResult = await _userManager.AddToRoleAsync(user, "Admin");
-            if (!roleResult.Succeeded)
-            {
-                return Result.Fail(
-                    $"Failed to assign role: {string.Join(", ",
-                        roleResult.Errors.Select(e => e.Description))}");
-            }
-
-            return Result.Success();
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            throw;
-        }
-    }
-
-    public async Task<Result<User>> ValidateUserCredentials(string email, string password, CancellationToken ct)
-    {
-        // var user = await _context.Users
-        //     .FirstOrDefaultAsync(u => u.Email == email);
-        var userRes = await _authRepository.GetUserByEmail(email);
-        if (userRes.Failure || userRes.Value == null)
-        {
-            return Result.Fail<User>($"No user found: {userRes.Error}");
+            return Result.Fail<TokensResponse>("User is null");
         }
 
-        var user = userRes.Value;
-        if (user == null || !(await VerifyPasswordAsync(user, password, ct)))
-        {
-            return Result.Fail<User>("Invalid email or password");
-        }
-
-        return Result.Success(user);
-    }
-
-    public async Task<(string token, string refreshToken)> GenerateTokens(User user, CancellationToken ct)
-    {
+        ct.ThrowIfCancellationRequested();
         var token = _jwtService.GenerateToken(user);
         var refreshToken = _jwtService.GenerateRefreshToken();
 
-        var userRefreshToken = new UserRefreshToken
+        var ip = GetIpAddress();
+        var newRefreshToken = new RefreshToken
         {
             UserId = user.Id,
             Token = refreshToken,
-            Expires = DateTime.UtcNow.AddDays(Convert.ToDouble(_configuration["Jwt:RefreshTokenExpirationDays"])),
+            Expires = DateTime.UtcNow.AddDays(_jwtOptions.RefreshTokenExpirationDays),
             CreatedAt = DateTime.UtcNow,
-            CreatedByIp = GetIpAddress()
+            CreatedByIp = ip
         };
 
-        var addTokenRes = await _authRepository.AddRefreshTokensAsync(userRefreshToken);
-        // _context.UserRefreshTokens.Add(userRefreshToken);
+        var addTokenRes = await _authRepository.AddRefreshTokenAsync(newRefreshToken, ct);
 
-        // var oldTokens = _context.UserRefreshTokens
-        //     .Where(rt => rt.UserId == user.Id && rt.Expires < DateTime.UtcNow);
-        // _context.UserRefreshTokens.RemoveRange(oldTokens);
-        //
-        // await _context.SaveChangesAsync();
-
-        return new ValueTuple<string, string>(token, refreshToken);
+        return addTokenRes.Failure switch
+        {
+            true => Result.Fail<TokensResponse>(addTokenRes.Error),
+            _ => Result.Success(new TokensResponse(token, refreshToken))
+        };
     }
 
     public async Task<Result<RefreshTokenResponse>> RefreshTokenAsync(string token, CancellationToken ct)
     {
-        // var storedRefreshToken = await _context.UserRefreshTokens
-        //     .Include(rt => rt.User)
-        //     .FirstOrDefaultAsync(rt => rt.Token == token && rt.Expires > DateTime.UtcNow);
-        var storedRefreshTokenRes = await _authRepository.GetRefreshTokenByValueToRefreshAsync(token);
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return Result.Fail<RefreshTokenResponse>("Token cannot be empty");
+        }
+
+        ct.ThrowIfCancellationRequested();
+        var storedRefreshTokenRes = await _authRepository.GetRefreshTokenByValueAsync(token, ct);
 
         if (storedRefreshTokenRes.Failure || storedRefreshTokenRes.Value == null)
         {
@@ -151,9 +121,27 @@ public class AuthService : IAuthService
         }
 
         var storedRefreshToken = storedRefreshTokenRes.Value;
+
         if (storedRefreshToken.Revoked != null)
         {
+            if (!string.IsNullOrEmpty(storedRefreshToken.ReplacedByToken))
+            {
+                await _authRepository.RevokeTokenFamilyAsync(storedRefreshToken.UserId, ct);
+
+                return Result.Fail<RefreshTokenResponse>("Token reuse detected");
+            }
+
             return Result.Fail<RefreshTokenResponse>("Token revoked");
+        }
+
+        if (storedRefreshToken.Expires <= DateTime.UtcNow)
+        {
+            return Result.Fail<RefreshTokenResponse>("Token expired");
+        }
+
+        if (storedRefreshToken.User == null)
+        {
+            return Result.Fail<RefreshTokenResponse>("User not found");
         }
 
         var newToken = _jwtService.GenerateToken(storedRefreshToken.User);
@@ -162,17 +150,19 @@ public class AuthService : IAuthService
         storedRefreshToken.Revoked = DateTime.UtcNow;
         storedRefreshToken.RevokedByIp = GetIpAddress();
         storedRefreshToken.ReplacedByToken = newRefreshToken;
-        var userRefreshToken = new UserRefreshToken
+
+        var userRefreshToken = new RefreshToken
         {
             UserId = storedRefreshToken.UserId,
             Token = newRefreshToken,
-            Expires = DateTime.UtcNow.AddDays(Convert.ToDouble(_configuration["Jwt:RefreshTokenExpirationDays"])),
+            Expires = DateTime.UtcNow.AddDays(_jwtOptions.RefreshTokenExpirationDays),
             CreatedAt = DateTime.UtcNow,
             CreatedByIp = GetIpAddress()
         };
-        // _context.UserRefreshTokens.Add(userRefreshToken);
-        // await _context.SaveChangesAsync();
-        var addTokenRes = await _authRepository.AddRefreshTokensAsync(userRefreshToken);
+
+        var addTokenRes = await _authRepository.AddRefreshTokenWithRevocationAsync(
+            userRefreshToken, storedRefreshToken, ct);
+
         if (addTokenRes.Failure)
         {
             return Result.Fail<RefreshTokenResponse>(addTokenRes.Error);
@@ -187,26 +177,25 @@ public class AuthService : IAuthService
         });
     }
 
-    public async Task<Result> LogoutAsync(string token, CancellationToken ct)
+    public async Task<Result> SignOutAsync(string token, CancellationToken ct)
     {
-        // var refreshToken = await _context.UserRefreshTokens
-        //     .FirstOrDefaultAsync(rt => rt.Token == token);
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return Result.Fail("Token cannot be empty");
+        }
 
-        var refreshTokenRes = await _authRepository.GetRefreshTokenByValueAsync(token);
+        ct.ThrowIfCancellationRequested();
+        var refreshTokenRes = await _authRepository.GetRefreshTokenByValueAsync(token, ct);
 
         if (refreshTokenRes.IsSuccess && refreshTokenRes.Value != null)
         {
             refreshTokenRes.Value.Revoked = DateTime.UtcNow;
             refreshTokenRes.Value.RevokedByIp = GetIpAddress();
-            var rtUpdateRes = await _authRepository.RevokeRefreshTokenAsync(refreshTokenRes.Value);
+            var rtUpdateRes = await _authRepository.RevokeRefreshTokenByValueAsync(refreshTokenRes.Value, ct);
             if (rtUpdateRes.Failure)
             {
                 return Result.Fail($"Couldn't revoke token: {rtUpdateRes.Error}");
             }
-        }
-        else
-        {
-            return Result.Fail("Refresh token wasn't found");
         }
 
         return Result.Success();
@@ -214,34 +203,111 @@ public class AuthService : IAuthService
 
     public async Task<Result<UserInfo>> GetUserAsync(Guid userId, CancellationToken ct)
     {
-        // var user = await _context.Users
-        //     .Where(u => u.Id == userId)
-        //     .FirstOrDefaultAsync();
-        var userRes = await _authRepository.GetUserById(userId);
-        if (userRes.Failure || userRes.Value == null)
-        {
-            return Result.Fail<UserInfo>("User is not found");
-        }
+        ct.ThrowIfCancellationRequested();
 
-        return Result.Success(userRes.Value);
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+
+            return user switch
+            {
+                null => Result.Fail<UserInfo>("User is not found"),
+                _ => Result.Success(new UserInfo { Id = userId, Email = user.Email })
+            };
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            return Result.Fail<UserInfo>("Operation cancelled");
+        }
+        catch (Exception e)
+        {
+            return Result.Fail<UserInfo>(e.Message);
+        }
     }
 
-    private async Task<bool> VerifyPasswordAsync(User user, string password, CancellationToken ct)
-        => await _userManager.CheckPasswordAsync(user, password);
+    public async Task<Result> ChangePasswordAsync(Guid userId, string oldPassword, string newPassword,
+        CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user is null)
+        {
+            return Result.Fail("User not found");
+        }
+
+        var res = await _userManager.ChangePasswordAsync(user, oldPassword, newPassword);
+
+        return res.Succeeded switch
+        {
+            false => Result.Fail(string.Join('\n', res.Errors.Select(e => e.Description))),
+            _ => Result.Success()
+        };
+    }
+
+    private async Task<Result> SignUpAsync(User user, string password, string role, CancellationToken ct)
+    {
+        user.UserName = user.Email ?? "";
+        ct.ThrowIfCancellationRequested();
+        try
+        {
+            var result = await _userManager.CreateAsync(user, password);
+            if (!result.Succeeded)
+            {
+                return Result.Fail($"Failed to create a user with role {role}: {string.Join(", ",
+                    result.Errors.Select(e => e.Description))}");
+            }
+
+            var roleResult = await _userManager.AddToRoleAsync(user, role);
+            if (!roleResult.Succeeded)
+            {
+                return Result.Fail(
+                    $"Failed to assign role: {string.Join(", ",
+                        roleResult.Errors.Select(e => e.Description))}");
+            }
+
+            return Result.Success();
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            return Result.Fail("Operation cancelled");
+        }
+        catch (Exception e)
+        {
+            return Result.Fail($"Error registering user: {e.Message}");
+        }
+    }
+
+    private async Task<bool> VerifyPasswordAsync(User user, string password, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        try
+        {
+            return await _userManager.CheckPasswordAsync(user, password);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+    }
 
     private string GetIpAddress()
     {
         var context = _httpContextAccessor.HttpContext;
         if (context == null)
         {
-            return null;
+            return UnknownIpAddress;
         }
 
-        if (context.Request.Headers.ContainsKey("X-Forwarded-For"))
+        var remoteIp = context.Connection.RemoteIpAddress;
+
+        try
         {
-            return context.Request.Headers["X-Forwarded-For"].ToString();
+            return remoteIp?.MapToIPv4().ToString() ?? UnknownIpAddress;
         }
-
-        return context.Connection.RemoteIpAddress?.MapToIPv4().ToString() ?? "0";
+        catch (Exception e)
+        {
+            return UnknownIpAddress;
+        }
     }
 }

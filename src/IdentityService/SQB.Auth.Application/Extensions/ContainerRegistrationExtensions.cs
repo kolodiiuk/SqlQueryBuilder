@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using SQB.Auth.Application.Options;
 using SQB.Auth.Application.Services;
 using SQB.Auth.Domain.Interfaces;
 
@@ -10,5 +11,7 @@ public static class ContainerRegistrationExtensions
     {
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IJwtService, JwtService>();
+        services.AddScoped<JwtOptions, JwtOptions>();
+        services.AddScoped<ConnectionStringsOptions, ConnectionStringsOptions>();
     }
 }

@@ -9,10 +9,12 @@ using Scalar.AspNetCore;
 using Serilog;
 using Serilog.Events;
 using SQB.Auth.Application.Extensions;
+using SQB.Auth.Application.Options;
 using SQB.Auth.Domain.Entities;
 using SQB.Auth.Domain.Models;
 using SQB.Auth.Infrastructure.Extensions;
 using SQB.Auth.Infrastructure.Repositories;
+using SQB.Shared.Middleware;
 
 var config = new ConfigurationBuilder()
     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
@@ -40,6 +42,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(options => { options.AddServerHeader = false; });
 
 DefaultTypeMap.MatchNamesWithUnderscores = true;
+
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
+builder.Services.Configure<ConnectionStringsOptions>(builder.Configuration.GetSection("ConnectionStrings"));
 
 builder.Services.RegisterServices();
 builder.Services.RegisterRepositories();
@@ -136,7 +141,7 @@ if (app.Environment.IsDevelopment())
             .WithOpenApiRoutePattern("/swagger/v1/swagger.json");
     });
 }
-
+app.UseMiddleware<ExceptionHandlerMiddleware>();
 // app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
