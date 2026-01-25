@@ -12,6 +12,5 @@ public static class ContainerRegistrationExtensions
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<JwtOptions, JwtOptions>();
-        services.AddScoped<ConnectionStringsOptions, ConnectionStringsOptions>();
     }
 }

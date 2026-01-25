@@ -1,4 +1,4 @@
-using Dapper;
+using Microsoft.Extensions.Options;
 using Npgsql;
 using SQB.Auth.Domain.Entities;
 using SQB.Auth.Domain.Interfaces;
@@ -11,53 +11,47 @@ public class AuthRepository : IAuthRepository
 {
     private readonly string _connString;
 
-    public AuthRepository(string connString)
+    public AuthRepository(IOptions<IdentityStoreOptions> options)
     {
-        _connString = connString;
+        _connString = options.Value.ConnectionString;
     }
 
-    public async Task<Result<UserInfo>> GetUserById(Guid userId)
+    public async Task<Result> RevokeRefreshTokenByValueAsync(RefreshToken value, CancellationToken ct)
     {
-        var sql = """
-                  select id, email 
-                  from users 
-                  where id = @id
-                  """;
-        await using var conn = Open();
-        var ui = await conn.QuerySingleOrDefaultAsync<UserInfo>(sql, new { id = userId });
-
-        return Result.Success(ui);
+        // should include user
+        throw new NotImplementedException();
+        // var storedRefreshToken = await _context.UserRefreshTokens
+        //     .Include(rt => rt.User)
+        //     .FirstOrDefaultAsync(rt => rt.Token == token && rt.Expires > DateTime.UtcNow);
     }
 
-    public async Task<Result> RevokeRefreshTokenAsync(UserRefreshToken rt)
+    public async Task<Result<RefreshToken>> GetRefreshTokenByValueAsync(string token, CancellationToken ct)
+    {
+        throw new NotImplementedException();
+        // var refreshToken = await _context.UserRefreshTokens
+        //     .FirstOrDefaultAsync(rt => rt.Token == token);
+    }
+
+    public async Task<Result> AddRefreshTokenAsync(RefreshToken refreshToken, CancellationToken ct)
     {
         throw new NotImplementedException();
     }
 
-    public async Task<Result<UserRefreshToken>> GetRefreshTokenByValueAsync(string token)
+    public async Task<Result> RevokeTokenFamilyAsync(Guid userId, CancellationToken ct)
     {
         throw new NotImplementedException();
     }
 
-    public async Task<Result<User>> GetUserByEmail(string email)
+    public async Task<Result> AddRefreshTokenWithRevocationAsync(
+        RefreshToken newRefreshToken, RefreshToken oldRefreshtoken, CancellationToken ct)
     {
         throw new NotImplementedException();
     }
 
-    public async Task<Result> AddRefreshTokensAsync(UserRefreshToken userRefreshToken)
-    {
-        throw new NotImplementedException();
-    }
-
-    public async Task<Result<UserRefreshToken>> GetRefreshTokenByValueToRefreshAsync(string token)
-    {
-        throw new NotImplementedException();
-    }
-
-    private NpgsqlConnection Open()
+    private async Task<NpgsqlConnection> OpenAsync(CancellationToken ct)
     {
         var conn = new NpgsqlConnection(_connString);
-        conn.Open();
+        await conn.OpenAsync(ct);
 
         return conn;
     }
