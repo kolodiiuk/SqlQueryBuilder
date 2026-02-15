@@ -104,9 +104,40 @@
         "PATCH"
       ],
       "SwaggerKey": "auth"
+    },
+    {
+      "DownstreamPathTemplate": "/api/auth/forget-password",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5279
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth/forget-password",
+      "UpstreamHttpMethod": [
+        "POST"
+      ],
+      "SwaggerKey": "auth"
+    },
+    {
+      "DownstreamPathTemplate": "/api/auth/reset-password",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5279
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth/reset-password",
+      "UpstreamHttpMethod": [
+        "POST"
+      ],
+      "SwaggerKey": "auth"
     }
   ],
   "GlobalConfiguration": {
     "BaseUrl": "http://localhost:5137"
   }
 }
+

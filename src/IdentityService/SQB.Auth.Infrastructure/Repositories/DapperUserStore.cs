@@ -71,7 +71,7 @@ public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
     {
         cancellationToken.ThrowIfCancellationRequested();
         const string sql = """
-                           insert into users
+                           insert into Users
                            (Id, UserName, NormalizedUserName, Email, NormalizedEmail,
                             EmailConfirmed, PasswordHash, SecurityStamp, ConcurrencyStamp,
                             PhoneNumber, PhoneNumberConfirmed, TwoFactorEnabled, LockoutEnd,
@@ -127,7 +127,7 @@ public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
     {
         cancellationToken.ThrowIfCancellationRequested();
         const string updateUserSql = """
-                                     update users
+                                     update Users
                                      set 
                                          UserName = @UserName,
                                          NormalizedUserName = @NormalizedUserName,
@@ -149,12 +149,12 @@ public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
                                          and ConcurrencyStamp = @OldStamp;
                                      """;
         const string insertRoleSql = """
-                                     insert into user_roles (UserId, RoleId) 
+                                     insert into UserRoles (UserId, RoleId) 
                                      select @UserId, Id from roles where NormalizedName = @RoleName
                                      on CONFLICT DO NOTHING;
                                      """;
         const string deleteRoleSql = """
-                                     delete from user_roles 
+                                     delete from UserRoles 
                                      where UserId = @UserId 
                                      and RoleId = (
                                         select Id 
@@ -227,7 +227,7 @@ public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
     {
         cancellationToken.ThrowIfCancellationRequested();
         const string sql = """
-                           delete from users
+                           delete from Users
                            where
                                Id = @UserId and ConcurrencyStamp = @ConcurrencyStamp
                            """;
@@ -264,9 +264,9 @@ public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
                                  u.LockoutEnabled, u.AccessFailedCount, u.CreatedAt, u.UpdatedAt,
                                  r.Id, r.Name
                            from
-                                users u
-                           left join user_roles ur on u.Id = ur.UserId
-                           left join roles r on r.Id = ur.RoleId
+                                Users u
+                           left join UserRoles ur on u.Id = ur.UserId
+                           left join Roles r on r.Id = ur.RoleId
                            where u.Id = @Id
                            """;
         await using var conn = await OpenAsync(cancellationToken);
@@ -308,9 +308,9 @@ public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
                                  u.LockoutEnabled, u.AccessFailedCount, u.CreatedAt, u.UpdatedAt,
                                  r.Id, r.Name
                            from
-                                users u
-                           left join user_roles ur on u.Id = ur.UserId
-                           left join roles r on r.Id = ur.RoleId
+                                Users u
+                           left join UserRoles ur on u.Id = ur.UserId
+                           left join Roles r on r.Id = ur.RoleId
                            where u.NormalizedUserName = @NormalizedUserName
                            """;
 
@@ -407,9 +407,9 @@ public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
                            select
                                  r.Name
                            from
-                                 roles r
+                                 Roles r
                            inner join 
-                                     user_roles ur on ur.RoleId = r.Id
+                                     UserRoles ur on ur.RoleId = r.Id
                            where
                                  ur.UserId = @UserId
                            """;
@@ -430,11 +430,11 @@ public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
                            select 
                                  u.Id
                            from 
-                                 users u
+                                 Users u
                            inner join 
-                                     user_roles ur on ur.UserId = u.Id
+                                     UserRoles ur on ur.UserId = u.Id
                            inner join 
-                                     roles r on r.Id = ur.RoleId
+                                     Roles r on r.Id = ur.RoleId
                            where 
                                  u.Id = @UserId and r.NormalizedName = @RoleName
                            """;
@@ -472,11 +472,11 @@ public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
                                  u.CreatedAt,
                                  u.UpdatedAt
                            from 
-                               users u
+                               Users u
                            inner join 
-                                   user_roles ur on u.Id = ur.UserId
+                                   UserRoles ur on u.Id = ur.UserId
                            inner join 
-                                   roles r on ur.RoleId = r.Id
+                                   Roles r on ur.RoleId = r.Id
                            where 
                                r.NormalizedName = @RoleName
                            """;
@@ -536,7 +536,7 @@ public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
                                    PhoneNumber, PhoneNumberConfirmed, TwoFactorEnabled, LockoutEnd,
                                    LockoutEnabled, AccessFailedCount, CreatedAt, UpdatedAt
                                from 
-                                   users 
+                                   Users 
                                where 
                                    NormalizedEmail = @NormalizedEmail
                            """;
@@ -545,8 +545,8 @@ public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
                                             r.Id,
                                             r.Name
                                       from
-                                            roles r
-                                      inner join user_roles ur on ur.RoleId = r.Id
+                                            Roles r
+                                      inner join UserRoles ur on ur.RoleId = r.Id
                                       where
                                             ur.UserId = @UserId;
                                       """;

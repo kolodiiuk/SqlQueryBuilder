@@ -47,9 +47,9 @@ public class AuthService : IAuthService
 
     public async Task<Result<User>> ValidateUserCredentialsAsync(string email, string password, CancellationToken ct)
     {
-        ct.ThrowIfCancellationRequested();
         try
         {
+            ct.ThrowIfCancellationRequested();
             var user = await _userManager.FindByEmailAsync(email);
             if (user == null)
             {
@@ -242,6 +242,16 @@ public class AuthService : IAuthService
             false => Result.Fail(string.Join('\n', res.Errors.Select(e => e.Description))),
             _ => Result.Success()
         };
+    }
+
+    public async Task<Result> SendPasswordResetConfirmationAsync(string reqEmail, CancellationToken ct)
+    {
+        throw new NotImplementedException();
+    }
+
+    public async Task<Result<bool>> ValidateResetPasswordRequestAsync(string token, CancellationToken ct)
+    {
+        throw new NotImplementedException();
     }
 
     private async Task<Result> SignUpAsync(User user, string password, string role, CancellationToken ct)
