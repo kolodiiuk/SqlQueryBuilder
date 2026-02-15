@@ -72,14 +72,14 @@ public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
         cancellationToken.ThrowIfCancellationRequested();
         const string sql = """
                            insert into users
-                           (id, user_name, normalized_user_name, email, normalized_email,
-                            email_confirmed, password_hash, security_stamp, concurrency_stamp,
-                            phone_number, phone_number_confirmed, two_factor_enabled, lockout_end,
-                            lockout_enabled, access_failed_count, created_at, updated_at)
-                           values (@id, @user_name, @normalized_user_name, @email, @normalized_email,
-                                   @email_confirmed, @password_hash, @security_stamp, @concurrency_stamp,
-                                   @phone_number, @phone_number_confirmed, @two_factor_enabled, @lockout_end,
-                                   @lockout_enabled, @access_failed_count, @created_at, @updated_at)
+                           (Id, UserName, NormalizedUserName, Email, NormalizedEmail,
+                            EmailConfirmed, PasswordHash, SecurityStamp, ConcurrencyStamp,
+                            PhoneNumber, PhoneNumberConfirmed, TwoFactorEnabled, LockoutEnd,
+                            LockoutEnabled, AccessFailedCount, CreatedAt, UpdatedAt)
+                           values (@Id, @UserName, @NormalizedUserName, @Email, @NormalizedEmail,
+                                   @EmailConfirmed, @PasswordHash, @SecurityStamp, @ConcurrencyStamp,
+                                   @PhoneNumber, @PhoneNumberConfirmed, @TwoFactorEnabled, @LockoutEnd,
+                                   @LockoutEnabled, @AccessFailedCount, @CreatedAt, @UpdatedAt)
                            """;
         var guid = user.Id == Guid.Empty ? Guid.NewGuid() : user.Id;
         var concurrencyStamp = Guid.NewGuid().ToString();
@@ -89,23 +89,23 @@ public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
             cancellationToken.ThrowIfCancellationRequested();
             var rows = await conn.ExecuteAsync(new CommandDefinition(sql, new
                 {
-                    id = guid,
-                    user_name = user.UserName,
-                    normalized_user_name = user.NormalizedUserName,
-                    email = user.Email,
-                    normalized_email = user.NormalizedEmail,
-                    email_confirmed = user.EmailConfirmed,
-                    password_hash = user.PasswordHash,
-                    security_stamp = user.SecurityStamp,
-                    concurrency_stamp = concurrencyStamp,
-                    phone_number = user.PhoneNumber,
-                    phone_number_confirmed = user.PhoneNumberConfirmed,
-                    two_factor_enabled = user.TwoFactorEnabled,
-                    lockout_end = user.LockoutEnd,
-                    lockout_enabled = user.LockoutEnabled,
-                    access_failed_count = user.AccessFailedCount,
-                    created_at = user.CreatedAt,
-                    updated_at = user.UpdatedAt
+                    Id = guid,
+                    UserName = user.UserName,
+                    NormalizedUserName = user.NormalizedUserName,
+                    Email = user.Email,
+                    NormalizedEmail = user.NormalizedEmail,
+                    EmailConfirmed = user.EmailConfirmed,
+                    PasswordHash = user.PasswordHash,
+                    SecurityStamp = user.SecurityStamp,
+                    ConcurrencyStamp = concurrencyStamp,
+                    PhoneNumber = user.PhoneNumber,
+                    PhoneNumberConfirmed = user.PhoneNumberConfirmed,
+                    TwoFactorEnabled = user.TwoFactorEnabled,
+                    LockoutEnd = user.LockoutEnd,
+                    LockoutEnabled = user.LockoutEnabled,
+                    AccessFailedCount = user.AccessFailedCount,
+                    CreatedAt = user.CreatedAt,
+                    UpdatedAt = user.UpdatedAt
                 },
                 cancellationToken: cancellationToken));
             user.Id = guid;
@@ -129,37 +129,37 @@ public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
         const string updateUserSql = """
                                      update users
                                      set 
-                                         user_name = @user_name,
-                                         normalized_user_name = @normalized_user_name,
-                                         email = @email,
-                                         normalized_email = @normalized_email,
-                                         email_confirmed = @email_confirmed,
-                                         password_hash = @password_hash,
-                                         security_stamp = @security_stamp,
-                                         concurrency_stamp = @new_concurrency_stamp,
-                                         phone_number = @phone_number, 
-                                         phone_number_confirmed = @phone_number_confirmed,  
-                                         two_factor_enabled = @two_factor_enabled, 
-                                         lockout_end = @lockout_end,
-                                         lockout_enabled = @lockout_enabled, 
-                                         access_failed_count = @access_failed_count,
-                                         updated_at = @updated_at
+                                         UserName = @UserName,
+                                         NormalizedUserName = @NormalizedUserName,
+                                         Email = @Email,
+                                         NormalizedEmail = @NormalizedEmail,
+                                         EmailConfirmed = @EmailConfirmed,
+                                         PasswordHash = @PasswordHash,
+                                         SecurityStamp = @SecurityStamp,
+                                         ConcurrencyStamp = @NewConcurrencyStamp,
+                                         PhoneNumber = @PhoneNumber, 
+                                         PhoneNumberConfirmed = @PhoneNumberConfirmed,  
+                                         TwoFactorEnabled = @TwoFactorEnabled, 
+                                         LockoutEnd = @LockoutEnd,
+                                         LockoutEnabled = @LockoutEnabled, 
+                                         AccessFailedCount = @AccessFailedCount,
+                                         UpdatedAt = @UpdatedAt
                                      where 
-                                         id = @id 
-                                         and concurrency_stamp = @old_stamp;
+                                         Id = @Id 
+                                         and ConcurrencyStamp = @OldStamp;
                                      """;
         const string insertRoleSql = """
-                                     insert into user_roles (user_id, role_id) 
-                                     select @user_id, id from roles where normalized_name = @role_name
+                                     insert into user_roles (UserId, RoleId) 
+                                     select @UserId, Id from roles where NormalizedName = @RoleName
                                      on CONFLICT DO NOTHING;
                                      """;
         const string deleteRoleSql = """
                                      delete from user_roles 
-                                     where user_id = @user_id 
-                                     and role_id = (
-                                        select id 
+                                     where UserId = @UserId 
+                                     and RoleId = (
+                                        select Id 
                                         from roles 
-                                        where normalized_name = @role_name);
+                                        where NormalizedName = @RoleName);
                                      """;
         var newConcurrencyStamp = Guid.NewGuid().ToString();
         await using var conn = await OpenAsync(cancellationToken);
@@ -169,23 +169,23 @@ public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
         {
             var rows = await conn.ExecuteAsync(new CommandDefinition(updateUserSql, new
             {
-                id = user.Id,
-                old_stamp = user.ConcurrencyStamp,
-                new_concurrency_stamp = newConcurrencyStamp,
-                user_name = user.UserName,
-                normalized_user_name = user.NormalizedUserName,
-                email = user.Email,
-                normalized_email = user.NormalizedEmail,
-                email_confirmed = user.EmailConfirmed,
-                password_hash = user.PasswordHash,
-                security_stamp = user.SecurityStamp,
-                phone_number = user.PhoneNumber,
-                phone_number_confirmed = user.PhoneNumberConfirmed,
-                two_factor_enabled = user.TwoFactorEnabled,
-                lockout_enabled = user.LockoutEnabled,
-                lockout_end = user.LockoutEnd,
-                access_failed_count = user.AccessFailedCount,
-                updated_at = DateTime.UtcNow
+                Id = user.Id,
+                OldStamp = user.ConcurrencyStamp,
+                NewConcurrencyStamp = newConcurrencyStamp,
+                UserName = user.UserName,
+                NormalizedUserName = user.NormalizedUserName,
+                Email = user.Email,
+                NormalizedEmail = user.NormalizedEmail,
+                EmailConfirmed = user.EmailConfirmed,
+                PasswordHash = user.PasswordHash,
+                SecurityStamp = user.SecurityStamp,
+                PhoneNumber = user.PhoneNumber,
+                PhoneNumberConfirmed = user.PhoneNumberConfirmed,
+                TwoFactorEnabled = user.TwoFactorEnabled,
+                LockoutEnabled = user.LockoutEnabled,
+                LockoutEnd = user.LockoutEnd,
+                AccessFailedCount = user.AccessFailedCount,
+                UpdatedAt = DateTime.UtcNow
             }, transaction: transaction, cancellationToken: cancellationToken));
 
             if (rows == 0)
@@ -197,14 +197,14 @@ public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
             foreach (var roleName in user.RolesToAdd)
             {
                 await conn.ExecuteAsync(new CommandDefinition(insertRoleSql,
-                    new { user_id = user.Id, role_name = roleName.ToUpper() },
+                    new { UserId = user.Id, RoleName = roleName.ToUpper() },
                     transaction: transaction, cancellationToken: cancellationToken));
             }
 
             foreach (var roleName in user.RolesToRemove)
             {
                 await conn.ExecuteAsync(new CommandDefinition(deleteRoleSql,
-                    new { user_id = user.Id, role_name = roleName.ToUpper() },
+                    new { UserId = user.Id, RoleName = roleName.ToUpper() },
                     transaction: transaction, cancellationToken: cancellationToken));
             }
 
@@ -229,12 +229,12 @@ public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
         const string sql = """
                            delete from users
                            where
-                               id = @user_id and concurrency_stamp = @concurrency_stamp
+                               Id = @UserId and ConcurrencyStamp = @ConcurrencyStamp
                            """;
         await using var conn = await OpenAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         var rows = await conn.ExecuteAsync(new CommandDefinition(sql,
-            new { user_id = user.Id, concurrency_stamp = user.ConcurrencyStamp },
+            new { UserId = user.Id, ConcurrencyStamp = user.ConcurrencyStamp },
             cancellationToken: cancellationToken));
         if (rows != 0)
         {
@@ -258,22 +258,22 @@ public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
 
         const string sql = """
                            select
-                                 u.id, u.user_name, u.normalized_user_name, u.email, u.normalized_email,
-                                 u.email_confirmed, u.password_hash, u.security_stamp, u.concurrency_stamp,
-                                 u.phone_number, u.phone_number_confirmed, u.two_factor_enabled, u.lockout_end,
-                                 u.lockout_enabled, u.access_failed_count, u.created_at, u.updated_at,
-                                 r.id, r.name
+                                 u.Id, u.UserName, u.NormalizedUserName, u.Email, u.NormalizedEmail,
+                                 u.EmailConfirmed, u.PasswordHash, u.SecurityStamp, u.ConcurrencyStamp,
+                                 u.PhoneNumber, u.PhoneNumberConfirmed, u.TwoFactorEnabled, u.LockoutEnd,
+                                 u.LockoutEnabled, u.AccessFailedCount, u.CreatedAt, u.UpdatedAt,
+                                 r.Id, r.Name
                            from
                                 users u
-                           left join user_roles ur on u.id = ur.user_id
-                           left join roles r on r.id = ur.role_id
-                           where u.id = @id
+                           left join user_roles ur on u.Id = ur.UserId
+                           left join roles r on r.Id = ur.RoleId
+                           where u.Id = @Id
                            """;
         await using var conn = await OpenAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         var lookup = new Dictionary<Guid, User>();
         await conn.QueryAsync<User, Role, User>(
-            new CommandDefinition(sql, new { id = id }, cancellationToken: cancellationToken),
+            new CommandDefinition(sql, new { Id = id }, cancellationToken: cancellationToken),
             (user, role) =>
             {
                 if (!lookup.TryGetValue(user.Id, out var trackedUser))
@@ -302,23 +302,23 @@ public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
         cancellationToken.ThrowIfCancellationRequested();
         const string sql = """
                            select
-                                 u.id, u.user_name, u.normalized_user_name, u.email, u.normalized_email,
-                                 u.email_confirmed, u.password_hash, u.security_stamp, u.concurrency_stamp,
-                                 u.phone_number, u.phone_number_confirmed, u.two_factor_enabled, u.lockout_end,
-                                 u.lockout_enabled, u.access_failed_count, u.created_at, u.updated_at,
-                                 r.id, r.name
+                                 u.Id, u.UserName, u.NormalizedUserName, u.Email, u.NormalizedEmail,
+                                 u.EmailConfirmed, u.PasswordHash, u.SecurityStamp, u.ConcurrencyStamp,
+                                 u.PhoneNumber, u.PhoneNumberConfirmed, u.TwoFactorEnabled, u.LockoutEnd,
+                                 u.LockoutEnabled, u.AccessFailedCount, u.CreatedAt, u.UpdatedAt,
+                                 r.Id, r.Name
                            from
                                 users u
-                           left join user_roles ur on u.id = ur.user_id
-                           left join roles r on r.id = ur.role_id
-                           where u.normalized_user_name = @normalized_user_name
+                           left join user_roles ur on u.Id = ur.UserId
+                           left join roles r on r.Id = ur.RoleId
+                           where u.NormalizedUserName = @NormalizedUserName
                            """;
 
         await using var conn = await OpenAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         var lookup = new Dictionary<Guid, User>();
         await conn.QueryAsync<User, Role, User>(
-            new CommandDefinition(sql, new { normalized_user_name = normalizedUserName },
+            new CommandDefinition(sql, new { NormalizedUserName = normalizedUserName },
                 cancellationToken: cancellationToken),
             (user, role) =>
             {
@@ -405,19 +405,19 @@ public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
         cancellationToken.ThrowIfCancellationRequested();
         const string sql = """
                            select
-                                 r.name
+                                 r.Name
                            from
                                  roles r
                            inner join 
-                                     user_roles ur on ur.role_id = r.id
+                                     user_roles ur on ur.RoleId = r.Id
                            where
-                                 ur.user_id = @user_id
+                                 ur.UserId = @UserId
                            """;
         await using var conn = await OpenAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         var roles = await conn.QueryAsync<string>(new CommandDefinition(sql, new
         {
-            user_id = user.Id
+            UserId = user.Id
         }, cancellationToken: cancellationToken));
 
         return roles.ToList();
@@ -428,22 +428,22 @@ public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
         cancellationToken.ThrowIfCancellationRequested();
         const string sql = """
                            select 
-                                 u.id
+                                 u.Id
                            from 
                                  users u
                            inner join 
-                                     user_roles ur on ur.user_id = u.id
+                                     user_roles ur on ur.UserId = u.Id
                            inner join 
-                                     roles r on r.id = ur.role_id
+                                     roles r on r.Id = ur.RoleId
                            where 
-                                 u.id = @user_id and r.normalized_name = @role_name
+                                 u.Id = @UserId and r.NormalizedName = @RoleName
                            """;
         await using var conn = await OpenAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         var id = await conn.QuerySingleOrDefaultAsync<Guid?>(new CommandDefinition(sql, new
         {
-            user_id = user.Id,
-            role_name = roleName.ToUpperInvariant()
+            UserId = user.Id,
+            RoleName = roleName.ToUpperInvariant()
         }, cancellationToken: cancellationToken));
 
         return id != null;
@@ -454,37 +454,37 @@ public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
         cancellationToken.ThrowIfCancellationRequested();
         const string sql = """
                            select
-                                 u.id,
-                                 u.user_name,
-                                 u.normalized_user_name,
-                                 u.email,
-                                 u.normalized_email,
-                                 u.email_confirmed,
-                                 u.password_hash,
-                                 u.security_stamp,
-                                 u.concurrency_stamp,
-                                 u.phone_number,
-                                 u.phone_number_confirmed,
-                                 u.two_factor_enabled,
-                                 u.lockout_end,
-                                 u.lockout_enabled,
-                                 u.access_failed_count,
-                                 u.created_at,
-                                 u.updated_at
+                                 u.Id,
+                                 u.UserName,
+                                 u.NormalizedUserName,
+                                 u.Email,
+                                 u.NormalizedEmail,
+                                 u.EmailConfirmed,
+                                 u.PasswordHash,
+                                 u.SecurityStamp,
+                                 u.ConcurrencyStamp,
+                                 u.PhoneNumber,
+                                 u.PhoneNumberConfirmed,
+                                 u.TwoFactorEnabled,
+                                 u.LockoutEnd,
+                                 u.LockoutEnabled,
+                                 u.AccessFailedCount,
+                                 u.CreatedAt,
+                                 u.UpdatedAt
                            from 
                                users u
                            inner join 
-                                   user_roles ur on u.id = ur.user_id
+                                   user_roles ur on u.Id = ur.UserId
                            inner join 
-                                   roles r on ur.role_id = r.id
+                                   roles r on ur.RoleId = r.Id
                            where 
-                               r.normalized_name = @role_name
+                               r.NormalizedName = @RoleName
                            """;
         await using var conn = await OpenAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         var users = await conn.QueryAsync<User>(new CommandDefinition(sql, new
         {
-            role_name = roleName.ToUpperInvariant()
+            RoleName = roleName.ToUpperInvariant()
         }, cancellationToken: cancellationToken));
 
         return new List<User>(users);
@@ -531,30 +531,30 @@ public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
         cancellationToken.ThrowIfCancellationRequested();
         const string sql = """
                                select
-                                   id, user_name, normalized_user_name, email, normalized_email,
-                                   email_confirmed, password_hash, security_stamp, concurrency_stamp,
-                                   phone_number, phone_number_confirmed, two_factor_enabled, lockout_end,
-                                   lockout_enabled, access_failed_count, created_at, updated_at
+                                   Id, UserName, NormalizedUserName, Email, NormalizedEmail,
+                                   EmailConfirmed, PasswordHash, SecurityStamp, ConcurrencyStamp,
+                                   PhoneNumber, PhoneNumberConfirmed, TwoFactorEnabled, LockoutEnd,
+                                   LockoutEnabled, AccessFailedCount, CreatedAt, UpdatedAt
                                from 
                                    users 
                                where 
-                                   normalized_email = @normalized_email
+                                   NormalizedEmail = @NormalizedEmail
                            """;
         const string getUserRoleSql = """
                                       select
-                                            r.id,
-                                            r.name
+                                            r.Id,
+                                            r.Name
                                       from
                                             roles r
-                                      inner join user_roles ur on ur.role_id = r.id
+                                      inner join user_roles ur on ur.RoleId = r.Id
                                       where
-                                            ur.user_id = @user_id;
+                                            ur.UserId = @UserId;
                                       """;
         await using var conn = await OpenAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         var user = await conn.QuerySingleOrDefaultAsync<User>(new CommandDefinition(sql, new
         {
-            normalized_email = normalizedEmail.ToUpperInvariant()
+            NormalizedEmail = normalizedEmail.ToUpperInvariant()
         }, cancellationToken: cancellationToken));
         if (user == null)
         {
@@ -563,7 +563,7 @@ public class DapperUserStore : IUserPasswordStore<User>, IUserRoleStore<User>, I
 
         var roles = await conn.QueryAsync<Role>(new CommandDefinition(getUserRoleSql, new
         {
-            user_id = user.Id
+            UserId = user.Id
         }, cancellationToken: cancellationToken));
         foreach (var role in roles)
         {
