@@ -16,7 +16,7 @@ public class AuthService : IAuthService
 
     private const string UserRoleName = "User";
 
-    private readonly IAuthRepository _authRepository;
+    private readonly IRefreshTokenRepository _refreshTokenRepository;
 
     private readonly IJwtService _jwtService;
 
@@ -26,13 +26,13 @@ public class AuthService : IAuthService
 
     private readonly JwtOptions _jwtOptions;
 
-    public AuthService(IAuthRepository authRepository,
+    public AuthService(IRefreshTokenRepository refreshTokenRepository,
         UserManager<User> userManager,
         IJwtService jwtService,
         IHttpContextAccessor httpContextAccessor,
         JwtOptions jwtOptions)
     {
-        _authRepository = authRepository;
+        _refreshTokenRepository = refreshTokenRepository;
         _userManager = userManager;
         _jwtService = jwtService;
         _httpContextAccessor = httpContextAccessor;
@@ -96,7 +96,7 @@ public class AuthService : IAuthService
             CreatedByIp = ip
         };
 
-        var addTokenRes = await _authRepository.AddRefreshTokenAsync(newRefreshToken, ct);
+        var addTokenRes = await _refreshTokenRepository.AddRefreshTokenAsync(newRefreshToken, ct);
 
         return addTokenRes.Failure switch
         {
@@ -113,20 +113,30 @@ public class AuthService : IAuthService
         }
 
         ct.ThrowIfCancellationRequested();
-        var storedRefreshTokenRes = await _authRepository.GetRefreshTokenByValueAsync(token, ct);
+        var storedRefreshTokenRes = await _refreshTokenRepository.GetRefreshTokenByValueAsync(token, ct);
 
         if (storedRefreshTokenRes.Failure || storedRefreshTokenRes.Value == null)
         {
             return Result.Fail<RefreshTokenResponse>("Invalid refresh token");
         }
 
+        var user = await _userManager.FindByIdAsync(storedRefreshTokenRes.Value.UserId.ToString());
+        if (user == null)
+        {
+            return Result.Fail<RefreshTokenResponse>("User not found");
+        }
+
         var storedRefreshToken = storedRefreshTokenRes.Value;
+        storedRefreshToken.User = user;
 
         if (storedRefreshToken.Revoked != null)
         {
             if (!string.IsNullOrEmpty(storedRefreshToken.ReplacedByToken))
             {
-                await _authRepository.RevokeTokenFamilyAsync(storedRefreshToken.UserId, ct);
+                var revoked = DateTime.UtcNow;
+                var revokedByIp = GetIpAddress();
+                await _refreshTokenRepository.RevokeTokenFamilyAsync(
+                    storedRefreshToken.UserId, revoked, revokedByIp, ct);
 
                 return Result.Fail<RefreshTokenResponse>("Token reuse detected");
             }
@@ -136,19 +146,16 @@ public class AuthService : IAuthService
 
         if (storedRefreshToken.Expires <= DateTime.UtcNow)
         {
+            // automatic revocation by expiration date
             return Result.Fail<RefreshTokenResponse>("Token expired");
-        }
-
-        if (storedRefreshToken.User == null)
-        {
-            return Result.Fail<RefreshTokenResponse>("User not found");
         }
 
         var newToken = _jwtService.GenerateToken(storedRefreshToken.User);
         var newRefreshToken = _jwtService.GenerateRefreshToken();
+        var ip = GetIpAddress();
 
         storedRefreshToken.Revoked = DateTime.UtcNow;
-        storedRefreshToken.RevokedByIp = GetIpAddress();
+        storedRefreshToken.RevokedByIp = ip;
         storedRefreshToken.ReplacedByToken = newRefreshToken;
 
         var userRefreshToken = new RefreshToken
@@ -157,10 +164,10 @@ public class AuthService : IAuthService
             Token = newRefreshToken,
             Expires = DateTime.UtcNow.AddDays(_jwtOptions.RefreshTokenExpirationDays),
             CreatedAt = DateTime.UtcNow,
-            CreatedByIp = GetIpAddress()
+            CreatedByIp = ip
         };
 
-        var addTokenRes = await _authRepository.AddRefreshTokenWithRevocationAsync(
+        var addTokenRes = await _refreshTokenRepository.AddRefreshTokenWithRevocationAsync(
             userRefreshToken, storedRefreshToken, ct);
 
         if (addTokenRes.Failure)
@@ -185,13 +192,13 @@ public class AuthService : IAuthService
         }
 
         ct.ThrowIfCancellationRequested();
-        var refreshTokenRes = await _authRepository.GetRefreshTokenByValueAsync(token, ct);
+        var refreshTokenRes = await _refreshTokenRepository.GetRefreshTokenByValueAsync(token, ct);
 
         if (refreshTokenRes.IsSuccess && refreshTokenRes.Value != null)
         {
             refreshTokenRes.Value.Revoked = DateTime.UtcNow;
             refreshTokenRes.Value.RevokedByIp = GetIpAddress();
-            var rtUpdateRes = await _authRepository.RevokeRefreshTokenByValueAsync(refreshTokenRes.Value, ct);
+            var rtUpdateRes = await _refreshTokenRepository.RevokeRefreshTokenByValueAsync(refreshTokenRes.Value, ct);
             if (rtUpdateRes.Failure)
             {
                 return Result.Fail($"Couldn't revoke token: {rtUpdateRes.Error}");

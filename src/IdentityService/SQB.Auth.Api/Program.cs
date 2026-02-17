@@ -38,6 +38,7 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseSerilog();
 
 builder.WebHost.ConfigureKestrel(options => { options.AddServerHeader = false; });
 
@@ -49,7 +50,7 @@ builder.Services.RegisterRepositories();
 var configuration = builder.Configuration;
 builder.Services.Configure<IdentityStoreOptions>(options =>
 {
-    options.ConnectionString = configuration.GetConnectionString("Identity");
+    options.ConnectionString = configuration.GetConnectionString("DefaultConnection");
 });
 builder.Services.Configure<JwtOptions>(configuration.GetSection("Jwt"));
 builder.Services.AddIdentityCore<User>(options =>

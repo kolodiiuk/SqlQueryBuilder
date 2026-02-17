@@ -1,3 +1,3 @@
-namespace SQB.Auth.Domain.Interfaces;
+namespace SQB.Auth.Domain.Models;
 
 public record TokensResponse(string Token, string RefreshToken);

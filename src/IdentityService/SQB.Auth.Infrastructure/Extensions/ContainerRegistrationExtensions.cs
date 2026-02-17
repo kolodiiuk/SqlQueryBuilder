@@ -8,6 +8,6 @@ public static class ContainerRegistrationExtensions
 {
     public static void RegisterRepositories(this IServiceCollection services)
     {
-        services.AddScoped<IAuthRepository, AuthRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
     }
 }
