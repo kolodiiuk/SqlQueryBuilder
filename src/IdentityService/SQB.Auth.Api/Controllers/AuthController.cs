@@ -414,4 +414,81 @@ public class AuthController : BaseController<AuthController>
 
         return StatusCode(StatusCodes.Status204NoContent);
     }
+
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [EndpointSummary("Changes a password of existing user.")]
+    [EndpointDescription("Accepts old password, new password from an authorized user.")]
+    [HttpPost("forget-password")]
+    public async Task<IActionResult> ForgetPassword(ForgetPasswordRequest req, CancellationToken ct)
+    {
+        if (req?.Email == null || !req.Email.IsValidEmail())
+        {
+            return Problem(
+                title: "Not valid email", 
+                statusCode:StatusCodes.Status400BadRequest);
+        }
+
+        var res = await _authService.SendPasswordResetConfirmationAsync(req.Email, ct);
+        if (res.Failure)
+        {
+            if (res.Error.Contains("Haven't found user with email"))
+            {
+                return Problem(
+                    title: "User with email not found",
+                    detail: res.Error,
+                    statusCode: StatusCodes.Status422UnprocessableEntity);
+            }
+            else
+            {
+                return Problem(
+                    title: "Problem while processing request",
+                    detail: res.Error,
+                    statusCode: StatusCodes.Status500InternalServerError);
+            }
+        }
+        
+        return StatusCode(StatusCodes.Status204NoContent);
+    }
+
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [HttpPost("reset-password")]
+    [EndpointSummary("Validates a request for password reset from email.")]
+    [EndpointDescription("Accepts token, validates it.")]
+    public async Task<IActionResult> ResetPassword([FromQuery] string token, CancellationToken ct)
+    {
+        if (token.IsNullOrEmpty())
+        {
+            return Problem(
+                title: "Token is not provided",
+                detail: "Token is not provided",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        var res = await _authService.ValidateResetPasswordRequestAsync(token, ct);
+        if (res.Failure)
+        {
+            if (res.Error.Contains("Token doesn't match"))
+            {
+                return Problem(
+                    title: "Password change is not authorised",
+                    detail: res.Error,
+                    statusCode: StatusCodes.Status403Forbidden);
+            }
+            else
+            {
+                return Problem(
+                    title: "Problem while processing request",
+                    detail: res.Error,
+                    statusCode: StatusCodes.Status500InternalServerError);
+            }
+        }
+
+        return StatusCode(StatusCodes.Status204NoContent);
+    }
 }

@@ -21,4 +21,8 @@ public interface IAuthService
     Task<Result> RegisterAdminAsync(User user, string registerRequestPassword, CancellationToken ct);
 
     Task<Result> ChangePasswordAsync(Guid userId, string oldPassword, string newPassword, CancellationToken ct);
+
+    Task<Result> SendPasswordResetConfirmationAsync(string reqEmail, CancellationToken ct);
+
+    Task<Result<bool>> ValidateResetPasswordRequestAsync(string token, CancellationToken ct);
 }
